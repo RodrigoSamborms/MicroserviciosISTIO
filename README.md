@@ -11,6 +11,14 @@
 - Istio instalado en el clúster
 - Chaos Mesh instalado para pruebas de resiliencia
 
+### ⚠️ Antes de continuar
+
+1. **Verifica tu instalación:** Ejecuta las verificaciones del archivo `VERIFICACION_INSTALACION.md` para confirmar que tienes todas las herramientas necesarias.
+
+2. **Si te falta alguna herramienta:** Consulta el archivo `INSTALACION_CONFIGURACION.md` que contiene instrucciones paso a paso para instalar todo desde cero.
+
+---
+
 ## Pasos para probar
 
 ### 1. Construir imágenes Docker
