@@ -1,0 +1,52 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: microservicios-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: microservicio-usuarios
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - microservicios-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/usuarios"
+    route:
+    - destination:
+        host: microservicio-usuarios
+        port:
+          number: 5000
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: microservicio-notificaciones
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - microservicios-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/notificar"
+    route:
+    - destination:
+        host: microservicio-notificaciones
+        port:
+          number: 5001
