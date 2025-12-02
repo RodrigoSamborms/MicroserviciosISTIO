@@ -4,10 +4,11 @@ Este documento te ayudará a verificar que tienes todas las herramientas necesar
 
 ## Checklist de verificación
 
-Ejecuta los siguientes comandos en WSL para verificar que tienes todo instalado y configurado correctamente:
+Ejecuta los siguientes comandos para verificar que tienes todo instalado y configurado correctamente:
 
 ### 1. Verificar WSL2
-```sh
+**Terminal: PowerShell (Windows)**
+```powershell
 wsl --list --verbose
 ```
 **Resultado esperado:** Debes ver tu distribución de Linux con versión 2.
@@ -15,7 +16,8 @@ wsl --list --verbose
 ---
 
 ### 2. Verificar Docker
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 docker --version
 docker ps
 ```
@@ -28,7 +30,8 @@ Si el comando `docker ps` falla, verifica que Docker Desktop esté corriendo y t
 ---
 
 ### 3. Verificar kubectl
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl version --client
 ```
 **Resultado esperado:** Versión de kubectl (ej: Client Version: v1.28.x)
@@ -36,7 +39,8 @@ kubectl version --client
 ---
 
 ### 4. Verificar minikube
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 minikube version
 ```
 **Resultado esperado:** Versión de minikube (ej: minikube version: v1.32.x)
@@ -44,7 +48,8 @@ minikube version
 ---
 
 ### 5. Verificar que minikube está corriendo
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 minikube status
 ```
 **Resultado esperado:**
@@ -58,14 +63,15 @@ kubeconfig: Configured
 ```
 
 Si minikube no está corriendo, inícialo con:
-```sh
+```bash
 minikube start --driver=docker
 ```
 
 ---
 
 ### 6. Verificar Istio
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 istioctl version
 ```
 **Resultado esperado:** Versiones del cliente y del control plane de Istio
@@ -75,7 +81,8 @@ Si solo ves la versión del cliente pero no del control plane, significa que Ist
 ---
 
 ### 7. Verificar que Istio está desplegado en el clúster
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl get pods -n istio-system
 ```
 **Resultado esperado:** Lista de pods de Istio en estado `Running`:
@@ -86,7 +93,8 @@ kubectl get pods -n istio-system
 ---
 
 ### 8. Verificar inyección automática de Istio
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl get namespace default --show-labels
 ```
 **Resultado esperado:** El namespace `default` debe tener el label `istio-injection=enabled`
@@ -94,7 +102,8 @@ kubectl get namespace default --show-labels
 ---
 
 ### 9. Verificar Chaos Mesh (opcional)
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl get pods -n chaos-mesh
 ```
 **Resultado esperado:** Lista de pods de Chaos Mesh en estado `Running`
@@ -113,9 +122,11 @@ Si no planeas usar Chaos Engineering, puedes omitir esta verificación.
 
 ## Comandos rápidos de verificación (todos en uno)
 
+**Terminal: WSL (Ubuntu)**
+
 Puedes ejecutar este script para verificar todo de una vez:
 
-```sh
+```bash
 echo "=== Verificando WSL ==="
 wsl --list --verbose
 
@@ -142,4 +153,6 @@ echo -e "\n=== Verificando Chaos Mesh (opcional) ==="
 kubectl get pods -n chaos-mesh
 ```
 
-Copia y pega todo el bloque anterior en tu terminal WSL para ejecutar todas las verificaciones.
+**Nota:** El primer comando `wsl --list --verbose` debe ejecutarse en PowerShell (Windows), el resto se ejecuta en WSL.
+
+Copia y pega todo el bloque anterior en tu terminal WSL para ejecutar todas las verificaciones (excepto el primer comando de WSL).

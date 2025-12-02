@@ -30,7 +30,8 @@ wsl --install -d Ubuntu-22.04
 Reinicia tu computadora si es necesario.
 
 ### Verificar instalación:
-```sh
+**Terminal: PowerShell (Windows)**
+```powershell
 wsl --list --verbose
 ```
 
@@ -59,7 +60,8 @@ docker ps
 
 ### En WSL (Ubuntu):
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Descargar kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 
@@ -79,7 +81,8 @@ kubectl version --client
 
 ### En WSL (Ubuntu):
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Descargar minikube
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 
@@ -91,12 +94,14 @@ minikube version
 ```
 
 ### Iniciar minikube:
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 minikube start --driver=docker
 ```
 
 ### Verificar que minikube está corriendo:
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 minikube status
 ```
 
@@ -106,7 +111,8 @@ minikube status
 
 ### En WSL (Ubuntu):
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Descargar Istio
 curl -L https://istio.io/downloadIstio | sh -
 
@@ -123,21 +129,24 @@ source ~/.bashrc
 
 ### Instalar Istio en el clúster de Kubernetes:
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Instalar Istio con perfil demo (incluye todos los componentes)
 istioctl install --set profile=demo -y
 ```
 
 ### Habilitar inyección automática de sidecar:
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Habilitar en el namespace default
 kubectl label namespace default istio-injection=enabled
 ```
 
 ### Verificar instalación:
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Verificar versión
 istioctl version
 
@@ -153,14 +162,16 @@ kubectl get pods -n istio-system
 
 ### En WSL (Ubuntu):
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Instalar Chaos Mesh
 curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 ```
 
 ### Verificar instalación:
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Verificar pods de Chaos Mesh
 kubectl get pods -n chaos-mesh
 ```
@@ -177,7 +188,8 @@ Una vez completados todos los pasos anteriores, ejecuta las verificaciones del a
 
 Istio incluye varios dashboards para observabilidad:
 
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Abrir Kiali (dashboard de Istio)
 istioctl dashboard kiali
 
@@ -212,14 +224,16 @@ Estos dashboards te permiten ver en tiempo real:
 - Asegúrate de tener habilitada la integración WSL2 en Docker Desktop → Settings → Resources → WSL Integration
 
 ### minikube no inicia
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Eliminar y recrear el clúster
 minikube delete
 minikube start --driver=docker
 ```
 
 ### Istio no se instala correctamente
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Desinstalar Istio
 istioctl uninstall --purge
 
@@ -228,7 +242,8 @@ istioctl install --set profile=demo -y
 ```
 
 ### Los pods de Istio no inician
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Verificar recursos de minikube (puede necesitar más memoria)
 minikube stop
 minikube start --driver=docker --memory=4096 --cpus=4

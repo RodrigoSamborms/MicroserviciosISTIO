@@ -22,7 +22,8 @@
 ## Pasos para probar
 
 ### 1. Construir imágenes Docker
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 cd microservicio-usuarios
 sudo docker build -t microservicio-usuarios:latest .
 cd ../microservicio-notificaciones
@@ -32,19 +33,22 @@ sudo docker build -t microservicio-notificaciones:latest .
 ### 2. Subir imágenes a un registry accesible por Kubernetes (opcional si usas minikube con `docker-env`)
 
 ### 3. Desplegar en Kubernetes
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl apply -f k8s/usuarios.yaml
 kubectl apply -f k8s/notificaciones.yaml
 kubectl apply -f k8s/istio.yaml
 ```
 
 ### 4. Habilitar Istio Ingress y obtener IP
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl get svc istio-ingressgateway -n istio-system
 ```
 
 ### 5. Probar la API
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 # Crear usuario
 curl -X POST http://<INGRESS_IP>/usuarios -H "Content-Type: application/json" -d '{"nombre": "Juan"}'
 
@@ -56,7 +60,8 @@ curl http://<INGRESS_IP>/usuarios
 - Accede a Kiali, Jaeger o Grafana según la instalación de Istio.
 
 ### 7. Probar resiliencia
-```sh
+**Terminal: WSL (Ubuntu)**
+```bash
 kubectl apply -f k8s/chaos-notificaciones.yaml
 ```
 Esto simulará fallos en el microservicio de notificaciones cada 2 minutos.
