@@ -17,6 +17,8 @@
 
 2. **Si te falta alguna herramienta:** Consulta el archivo `INSTALACION_CONFIGURACION.md` que contiene instrucciones paso a paso para instalar todo desde cero.
 
+3. **Verifica que los addons de Istio estén instalados:** Ejecuta `kubectl get pods -n istio-system` y asegúrate de ver pods de `kiali`, `jaeger`, `grafana`, y `prometheus` en estado `Running`. Si no están instalados, consulta la sección de addons en `INSTALACION_CONFIGURACION.md`.
+
 ---
 
 ## Pasos para probar

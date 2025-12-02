@@ -99,6 +99,16 @@ minikube version
 minikube start --driver=docker
 ```
 
+**⚠️ Nota sobre recursos:** Si tu sistema tiene memoria limitada (4GB o menos), es recomendable especificar los recursos explícitamente:
+```bash
+minikube start --driver=docker --memory=2048 --cpus=2
+```
+
+Para sistemas con más recursos (8GB+):
+```bash
+minikube start --driver=docker --memory=4096 --cpus=3
+```
+
 ### Verificar que minikube está corriendo:
 **Terminal: WSL (Debian)**
 ```bash
@@ -154,9 +164,32 @@ istioctl version
 kubectl get pods -n istio-system
 ```
 
+### Instalar addons de observabilidad:
+
+Después de instalar Istio, es necesario instalar manualmente los addons de observabilidad (Kiali, Jaeger, Prometheus, Grafana):
+
+**Terminal: WSL (Debian)**
+```bash
+# Navegar al directorio de Istio
+cd istio-1.28.0
+
+# Instalar todos los addons
+kubectl apply -f samples/addons
+
+# Esperar a que los pods estén listos (puede tomar 3-5 minutos)
+kubectl get pods -n istio-system
+```
+
+**Nota:** Los pods pueden tardar varios minutos en iniciarse, especialmente con recursos limitados. Es normal ver el estado `ContainerCreating` mientras se descargan las imágenes (que pueden pesar más de 300MB en total).
+
 ---
 
 ## 6. Instalación de Chaos Mesh (opcional)
+
+**⚠️ Importante:** Chaos Mesh consume recursos adicionales. Si tu sistema tiene memoria limitada (4GB o menos), se recomienda:
+1. Primero desplegar y probar los microservicios básicos
+2. Verificar que las métricas de Istio funcionan correctamente
+3. Después, si todo funciona bien, instalar Chaos Mesh
 
 **Nota:** Solo instala Chaos Mesh si deseas realizar pruebas avanzadas de Chaos Engineering.
 
@@ -190,18 +223,33 @@ Una vez completados todos los pasos anteriores, ejecuta las verificaciones del a
 
 ## 8. Configurar acceso a dashboards de Istio
 
-Istio incluye varios dashboards para observabilidad:
+Istio incluye varios dashboards para observabilidad. **Primero verifica que los addons estén instalados:**
 
 **Terminal: WSL (Debian)**
 ```bash
+# Verificar que todos los addons estén corriendo
+kubectl get pods -n istio-system
+```
+
+**Resultado esperado:** Debes ver pods de `grafana`, `jaeger`, `kiali`, y `prometheus` en estado `Running`.
+
+**Si algún dashboard no está instalado,** consulta el Problema 2 en `RESOLUCION_PROBLEMAS.md`.
+
+**Una vez que los pods estén corriendo, abre los dashboards:**
+
+**Terminal: WSL (Debian)**
+```bash
+# Navegar al directorio de Istio
+cd istio-1.28.0
+
 # Abrir Kiali (dashboard de Istio)
-istioctl dashboard kiali
+./bin/istioctl dashboard kiali
 
 # Abrir Jaeger (trazas distribuidas)
-istioctl dashboard jaeger
+./bin/istioctl dashboard jaeger
 
 # Abrir Grafana (métricas)
-istioctl dashboard grafana
+./bin/istioctl dashboard grafana
 ```
 
 Estos dashboards te permiten ver en tiempo real:

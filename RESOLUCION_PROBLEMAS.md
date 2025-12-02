@@ -88,7 +88,137 @@ kubectl get crd | grep chaos-mesh
 
 ---
 
-## Problema 2: [Espacio para futuros problemas]
+## Problema 2: Dashboards de Kiali y Jaeger no están disponibles
+
+### Síntoma
+Al intentar abrir los dashboards con `istioctl dashboard kiali` o `istioctl dashboard jaeger`, obtienes el error:
+
+```
+Error: no pods found with selector app=kiali
+Error: no pods found with selector app=jaeger
+```
+
+### Causa
+Los addons de observabilidad de Istio (Kiali, Jaeger, Prometheus) no se instalan automáticamente con el perfil `demo`. Solo Grafana se instala por defecto.
+
+### Solución
+
+**Instalar los addons de observabilidad manualmente:**
+
+**Terminal: WSL (Debian)**
+```bash
+# Navegar al directorio de Istio
+cd istio-1.28.0
+
+# Instalar todos los addons
+kubectl apply -f samples/addons
+
+# Esperar a que los pods estén listos (puede tomar 2-3 minutos)
+kubectl get pods -n istio-system -w
+```
+
+Presiona `Ctrl+C` para detener el watch cuando veas que los pods están en estado `Running`.
+
+### Verificación
+
+**Terminal: WSL (Debian)**
+```bash
+# Verificar que todos los addons estén corriendo
+kubectl get pods -n istio-system
+
+# Navegar al directorio de Istio
+cd istio-1.28.0
+
+# Ahora deberías poder abrir los dashboards
+./bin/istioctl dashboard kiali
+./bin/istioctl dashboard jaeger
+./bin/istioctl dashboard grafana
+```
+
+**Nota importante:** Los pods pueden tardar 3-5 minutos en estar completamente listos después de aplicar los addons. Si ves estado `ContainerCreating`, espera unos minutos más.
+
+### Impacto
+Sin estos addons, no podrás visualizar las métricas y trazas distribuidas, que son fundamentales para la observabilidad.
+
+---
+
+## Problema 3: Minikube se queda sin recursos (API server stopped)
+
+### Síntoma
+Al verificar el estado de minikube:
+```
+minikube status
+apiserver: Stopped
+```
+
+O al ejecutar comandos `kubectl`:
+```
+Unable to connect to the server: net/http: TLS handshake timeout
+```
+
+### Causa
+Minikube se quedó sin recursos (memoria o CPU) al intentar correr todos los componentes de Istio, Chaos Mesh y los addons de observabilidad.
+
+### Solución
+
+**Opción 1: Reiniciar minikube (sin cambiar recursos)**
+
+**Terminal: WSL (Debian)**
+```bash
+minikube stop
+minikube start --driver=docker
+```
+
+**Opción 2: Recrear minikube con ajuste de recursos**
+
+Si tienes suficiente memoria en tu sistema (recomendado 8GB+):
+
+**Terminal: WSL (Debian)**
+```bash
+# Eliminar el clúster actual
+minikube delete
+
+# Recrear con más recursos
+minikube start --driver=docker --memory=4096 --cpus=3
+```
+
+Si tienes memoria limitada (4GB o menos):
+
+**Terminal: WSL (Debian)**
+```bash
+# Eliminar el clúster actual
+minikube delete
+
+# Recrear con recursos mínimos
+minikube start --driver=docker --memory=2048 --cpus=2
+```
+
+**⚠️ Importante:** Después de recrear minikube, deberás reinstalar Istio y los addons:
+
+**Terminal: WSL (Debian)**
+```bash
+# Reinstalar Istio
+cd istio-1.28.0
+istioctl install --set profile=demo -y
+
+# Habilitar inyección de sidecar
+kubectl label namespace default istio-injection=enabled
+
+# Reinstalar addons
+kubectl apply -f samples/addons
+
+# Reinstalar Chaos Mesh (opcional)
+curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
+```
+
+### Prevención
+- Monitorea el uso de recursos de tu sistema
+- Considera cerrar aplicaciones innecesarias mientras trabajas con Kubernetes
+- Si el problema persiste, evalúa instalar más RAM o usar una máquina virtual dedicada
+
+---
+
+## Problema 4: [Espacio para futuros problemas]
 
 *Se agregarán más problemas y soluciones según se encuentren durante la implementación del proyecto.*
 
