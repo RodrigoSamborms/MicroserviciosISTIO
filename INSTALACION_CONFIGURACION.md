@@ -168,6 +168,8 @@ kubectl get pods -n istio-system
 curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 ```
 
+**⚠️ Nota importante:** Durante la instalación, es común que el pod `chaos-daemon` muestre el estado `ImagePullBackOff` y la instalación se quede esperando. Si esto ocurre después de 5-10 minutos, puedes detener el proceso con `Ctrl+C`. La mayoría de los componentes de Chaos Mesh estarán funcionando correctamente. Consulta el archivo `RESOLUCION_PROBLEMAS.md` para más detalles sobre este problema.
+
 ### Verificar instalación:
 
 **Terminal: WSL (Debian)**
@@ -175,6 +177,8 @@ curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 # Verificar pods de Chaos Mesh
 kubectl get pods -n chaos-mesh
 ```
+
+**Resultado esperado:** La mayoría de los pods deben estar en estado `Running`. Si `chaos-daemon` muestra `ImagePullBackOff`, consulta `RESOLUCION_PROBLEMAS.md` - esto no impedirá usar las funcionalidades básicas de Chaos Engineering.
 
 ---
 
