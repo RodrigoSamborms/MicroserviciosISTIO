@@ -23,8 +23,8 @@ wsl --install
 # Si ya tienes WSL instalado, actualiza a WSL2
 wsl --set-default-version 2
 
-# Instalar Ubuntu (recomendado)
-wsl --install -d Ubuntu-22.04
+# Instalar Debian (usado en este proyecto)
+wsl --install -d Debian
 ```
 
 Reinicia tu computadora si es necesario.
@@ -46,7 +46,7 @@ wsl --list --verbose
 3. Asegúrate de habilitar la integración con WSL2 durante la instalación
 4. Una vez instalado, abre Docker Desktop
 5. Ve a Settings → Resources → WSL Integration
-6. Habilita la integración con tu distribución de Ubuntu
+6. Habilita la integración con tu distribución de Debian
 
 ### Verificar instalación (en WSL):
 ```sh
@@ -58,9 +58,9 @@ docker ps
 
 ## 3. Instalación de kubectl
 
-### En WSL (Ubuntu):
+### En WSL (Debian):
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Descargar kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -79,9 +79,9 @@ kubectl version --client
 
 ## 4. Instalación de minikube
 
-### En WSL (Ubuntu):
+### En WSL (Debian):
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Descargar minikube
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -94,13 +94,13 @@ minikube version
 ```
 
 ### Iniciar minikube:
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 minikube start --driver=docker
 ```
 
 ### Verificar que minikube está corriendo:
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 minikube status
 ```
@@ -109,9 +109,9 @@ minikube status
 
 ## 5. Instalación de Istio
 
-### En WSL (Ubuntu):
+### En WSL (Debian):
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Descargar Istio
 curl -L https://istio.io/downloadIstio | sh -
@@ -129,7 +129,7 @@ source ~/.bashrc
 
 ### Instalar Istio en el clúster de Kubernetes:
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Instalar Istio con perfil demo (incluye todos los componentes)
 istioctl install --set profile=demo -y
@@ -137,7 +137,7 @@ istioctl install --set profile=demo -y
 
 ### Habilitar inyección automática de sidecar:
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Habilitar en el namespace default
 kubectl label namespace default istio-injection=enabled
@@ -145,7 +145,7 @@ kubectl label namespace default istio-injection=enabled
 
 ### Verificar instalación:
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Verificar versión
 istioctl version
@@ -160,9 +160,9 @@ kubectl get pods -n istio-system
 
 **Nota:** Solo instala Chaos Mesh si deseas realizar pruebas avanzadas de Chaos Engineering.
 
-### En WSL (Ubuntu):
+### En WSL (Debian):
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Instalar Chaos Mesh
 curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
@@ -170,7 +170,7 @@ curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 
 ### Verificar instalación:
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Verificar pods de Chaos Mesh
 kubectl get pods -n chaos-mesh
@@ -188,7 +188,7 @@ Una vez completados todos los pasos anteriores, ejecuta las verificaciones del a
 
 Istio incluye varios dashboards para observabilidad:
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Abrir Kiali (dashboard de Istio)
 istioctl dashboard kiali
@@ -224,7 +224,7 @@ Estos dashboards te permiten ver en tiempo real:
 - Asegúrate de tener habilitada la integración WSL2 en Docker Desktop → Settings → Resources → WSL Integration
 
 ### minikube no inicia
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Eliminar y recrear el clúster
 minikube delete
@@ -232,7 +232,7 @@ minikube start --driver=docker
 ```
 
 ### Istio no se instala correctamente
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Desinstalar Istio
 istioctl uninstall --purge
@@ -242,7 +242,7 @@ istioctl install --set profile=demo -y
 ```
 
 ### Los pods de Istio no inician
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 # Verificar recursos de minikube (puede necesitar más memoria)
 minikube stop

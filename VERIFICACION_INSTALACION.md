@@ -11,12 +11,12 @@ Ejecuta los siguientes comandos para verificar que tienes todo instalado y confi
 ```powershell
 wsl --list --verbose
 ```
-**Resultado esperado:** Debes ver tu distribución de Linux con versión 2.
+**Resultado esperado:** Debes ver tu distribución de Linux (Debian) con versión 2.
 
 ---
 
 ### 2. Verificar Docker
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 docker --version
 docker ps
@@ -30,7 +30,7 @@ Si el comando `docker ps` falla, verifica que Docker Desktop esté corriendo y t
 ---
 
 ### 3. Verificar kubectl
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 kubectl version --client
 ```
@@ -39,7 +39,7 @@ kubectl version --client
 ---
 
 ### 4. Verificar minikube
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 minikube version
 ```
@@ -48,7 +48,7 @@ minikube version
 ---
 
 ### 5. Verificar que minikube está corriendo
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 minikube status
 ```
@@ -70,7 +70,7 @@ minikube start --driver=docker
 ---
 
 ### 6. Verificar Istio
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 istioctl version
 ```
@@ -81,7 +81,7 @@ Si solo ves la versión del cliente pero no del control plane, significa que Ist
 ---
 
 ### 7. Verificar que Istio está desplegado en el clúster
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 kubectl get pods -n istio-system
 ```
@@ -93,7 +93,7 @@ kubectl get pods -n istio-system
 ---
 
 ### 8. Verificar inyección automática de Istio
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 kubectl get namespace default --show-labels
 ```
@@ -102,7 +102,7 @@ kubectl get namespace default --show-labels
 ---
 
 ### 9. Verificar Chaos Mesh (opcional)
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 ```bash
 kubectl get pods -n chaos-mesh
 ```
@@ -122,7 +122,7 @@ Si no planeas usar Chaos Engineering, puedes omitir esta verificación.
 
 ## Comandos rápidos de verificación (todos en uno)
 
-**Terminal: WSL (Ubuntu)**
+**Terminal: WSL (Debian)**
 
 Puedes ejecutar este script para verificar todo de una vez:
 
