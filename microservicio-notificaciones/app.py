@@ -4,6 +4,10 @@ import time
 
 app = Flask(__name__)
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
+
 @app.route('/notificar', methods=['POST'])
 def notificar():
     # Simula fallo aleatorio o retardo

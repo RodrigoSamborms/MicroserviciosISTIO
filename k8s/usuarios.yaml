@@ -15,7 +15,7 @@ kind: Deployment
 metadata:
   name: microservicio-usuarios
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: microservicio-usuarios
@@ -27,6 +27,7 @@ spec:
       containers:
       - name: microservicio-usuarios
         image: microservicio-usuarios:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         readinessProbe:

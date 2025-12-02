@@ -15,7 +15,7 @@ kind: Deployment
 metadata:
   name: microservicio-notificaciones
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: microservicio-notificaciones
@@ -27,17 +27,18 @@ spec:
       containers:
       - name: microservicio-notificaciones
         image: microservicio-notificaciones:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 5001
         readinessProbe:
           httpGet:
-            path: /notificar
+            path: /health
             port: 5001
           initialDelaySeconds: 5
           periodSeconds: 5
         livenessProbe:
           httpGet:
-            path: /notificar
+            path: /health
             port: 5001
           initialDelaySeconds: 10
           periodSeconds: 10
