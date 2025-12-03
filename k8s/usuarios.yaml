@@ -6,7 +6,8 @@ spec:
   selector:
     app: microservicio-usuarios
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 5000
       targetPort: 5000
 ---

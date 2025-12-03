@@ -75,30 +75,36 @@ kubectl get pods
 
 Espera hasta que todos los pods estén en estado `2/2 Running`. Esto puede tomar 2-3 minutos.
 
-### 6. Habilitar Istio Ingress Gateway con túnel
+### 6. Obtener IP y puerto del Ingress Gateway
 
-**Terminal: WSL (Debian) - Mantén esta terminal abierta**
+**Terminal: WSL (Debian)**
 ```bash
-minikube tunnel
-```
+# Obtener la IP de minikube
+minikube ip
 
-**Nota:** Este comando debe permanecer ejecutándose. Abre otra terminal WSL para los siguientes pasos.
-
-En otra terminal, verifica la IP del Ingress:
-```bash
+# Obtener el puerto del Ingress Gateway (buscar el puerto NodePort para el puerto 80)
 kubectl get svc istio-ingressgateway -n istio-system
 ```
 
-La `EXTERNAL-IP` debe ser `127.0.0.1`.
+Anota la IP de minikube (ejemplo: `192.168.49.2`) y el puerto NodePort mapeado al puerto 80 (ejemplo: `31769` en la columna `PORT(S)` mostrado como `80:31769/TCP`).
 
 ### 7. Probar la API
-**Terminal: WSL (Debian) - En otra terminal (no la del túnel)**
+**Terminal: WSL (Debian)**
+
+Reemplaza `<MINIKUBE_IP>` con la IP obtenida (ej: 192.168.49.2) y `<NODEPORT>` con el puerto obtenido (ej: 31769):
+
 ```bash
 # Crear usuario
-curl -X POST http://127.0.0.1/usuarios -H "Content-Type: application/json" -d '{"nombre":"Juan"}'
+curl -X POST http://<MINIKUBE_IP>:<NODEPORT>/usuarios -H "Content-Type: application/json" -d '{"nombre":"Juan"}'
 
 # Listar usuarios
-curl http://127.0.0.1/usuarios
+curl http://<MINIKUBE_IP>:<NODEPORT>/usuarios
+```
+
+**Ejemplo con valores reales:**
+```bash
+curl -X POST http://192.168.49.2:31769/usuarios -H "Content-Type: application/json" -d '{"nombre":"Juan"}'
+curl http://192.168.49.2:31769/usuarios
 ```
 
 **Resultado esperado:** Deberías ver la respuesta JSON con el usuario creado y la lista de usuarios.

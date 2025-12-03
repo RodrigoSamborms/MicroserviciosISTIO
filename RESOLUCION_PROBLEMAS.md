@@ -218,7 +218,114 @@ curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 
 ---
 
-## Problema 4: [Espacio para futuros problemas]
+## Problema 4: Error 404 al acceder a los endpoints de la API
+
+### Síntoma
+Al intentar acceder a la API usando `curl http://127.0.0.1/usuarios`, obtienes:
+```
+404 page not found
+```
+
+### Causa
+Existen dos causas principales:
+
+**Causa 1: Los servicios de Kubernetes no tienen nombres de puerto definidos**
+
+Istio requiere que los puertos en los servicios tengan nombres explícitos que sigan el patrón `<protocol>[-<suffix>]` (ejemplo: `http`, `http-web`, `tcp`, etc.). Sin esto, Istio no puede enrutar correctamente el tráfico HTTP.
+
+**Causa 2: Conflicto de puerto con el túnel de minikube**
+
+El comando `minikube tunnel` crea túneles SSH que pueden conflictuar con el puerto 80. En algunos sistemas, el proceso SSH ocupa el puerto 80 y responde con 404 en lugar de reenviar al Ingress Gateway.
+
+### Solución
+
+**Paso 1: Verificar nombres de puerto en servicios**
+
+**Terminal: WSL (Debian)**
+```bash
+# Analizar configuración de Istio
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.28.0
+./bin/istioctl analyze -n default
+```
+
+Si ves mensajes como:
+```
+Info [IST0118] (Service default/microservicio-usuarios) Port name (port: 5000, targetPort: 5000) doesn't follow the naming convention of Istio port.
+```
+
+Entonces necesitas agregar nombres a los puertos en los archivos `k8s/usuarios.yaml` y `k8s/notificaciones.yaml`:
+
+```yaml
+# Antes
+ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+
+# Después
+ports:
+  - name: http        # <-- Agregar esta línea
+    protocol: TCP
+    port: 5000
+    targetPort: 5000
+```
+
+Luego aplica los cambios:
+```bash
+kubectl apply -f k8s/usuarios.yaml
+kubectl apply -f k8s/notificaciones.yaml
+```
+
+**Paso 2: Usar NodePort en lugar del túnel**
+
+En lugar de usar `minikube tunnel` y acceder por `http://127.0.0.1`, accede directamente via la IP de minikube y el NodePort:
+
+**Terminal: WSL (Debian)**
+```bash
+# Obtener IP de minikube
+minikube ip
+
+# Obtener el NodePort del Ingress Gateway (buscar el puerto mapeado a 80)
+kubectl get svc istio-ingressgateway -n istio-system
+```
+
+Ejemplo de salida:
+```
+NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)
+istio-ingressgateway   LoadBalancer   10.101.234.253   127.0.0.1     80:31769/TCP,...
+                                                                        ↑    ↑
+                                                                     puerto  NodePort
+                                                                     externo
+```
+
+Usa la IP de minikube y el NodePort:
+```bash
+# Ejemplo con IP 192.168.49.2 y NodePort 31769
+curl -X POST http://192.168.49.2:31769/usuarios -H "Content-Type: application/json" -d '{"nombre":"Juan"}'
+curl http://192.168.49.2:31769/usuarios
+```
+
+### Verificación
+
+**Terminal: WSL (Debian)**
+```bash
+# La respuesta debe ser JSON, no "404 page not found"
+curl http://<MINIKUBE_IP>:<NODEPORT>/usuarios
+
+# Respuesta esperada:
+# []
+# o
+# [{"id":1,"nombre":"Juan"}]
+```
+
+Si recibes respuestas JSON, el problema está resuelto.
+
+### Impacto
+Sin acceso correcto a la API, no podrás probar la funcionalidad de los microservicios ni observar las métricas y trazas en los dashboards.
+
+---
+
+## Problema 5: [Espacio para futuros problemas]
 
 *Se agregarán más problemas y soluciones según se encuentren durante la implementación del proyecto.*
 
