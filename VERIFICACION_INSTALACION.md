@@ -101,14 +101,17 @@ kubectl get namespace default --show-labels
 
 ---
 
-### 9. Verificar Chaos Mesh (opcional)
+### 9. Verificar configuración de Fault Injection de Istio (opcional)
 **Terminal: WSL (Debian)**
 ```bash
-kubectl get pods -n chaos-mesh
-```
-**Resultado esperado:** Lista de pods de Chaos Mesh en estado `Running`
+# Analizar configuración de Istio en el namespace default
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.28.0
+./bin/istioctl analyze -n default
 
-Si no planeas usar Chaos Engineering, puedes omitir esta verificación.
+# Ver VirtualServices y DestinationRules (si aplicaste fault injection)
+kubectl get virtualservice,destinationrule -n default
+```
+**Resultado esperado:** Sin errores críticos en `istioctl analyze` y, si aplicaste inyección de fallos, deben aparecer los recursos correspondientes.
 
 ---
 
@@ -149,8 +152,10 @@ kubectl get pods -n istio-system
 echo -e "\n=== Verificando inyección de Istio ==="
 kubectl get namespace default --show-labels
 
-echo -e "\n=== Verificando Chaos Mesh (opcional) ==="
-kubectl get pods -n chaos-mesh
+echo -e "\n=== Verificando Fault Injection de Istio (opcional) ==="
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.28.0
+./bin/istioctl analyze -n default
+kubectl get virtualservice,destinationrule -n default
 ```
 
 **Nota:** El primer comando `wsl --list --verbose` debe ejecutarse en PowerShell (Windows), el resto se ejecuta en WSL.

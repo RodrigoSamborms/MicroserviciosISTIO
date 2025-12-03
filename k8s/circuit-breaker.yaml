@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: microservicio-notificaciones-circuit-breaker
+spec:
+  host: microservicio-notificaciones
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1  # Máximo de conexiones simultáneas
+      http:
+        http1MaxPendingRequests: 1  # Máximo de peticiones pendientes
+        maxRequestsPerConnection: 1
+    outlierDetection:
+      consecutiveErrors: 1  # Después de 1 error consecutivo
+      interval: 1s  # Revisar cada segundo
+      baseEjectionTime: 30s  # Tiempo de expulsión
+      maxEjectionPercent: 100  # Puede expulsar hasta 100% de los pods
+      minHealthPercent: 0  # Mínimo de pods saludables

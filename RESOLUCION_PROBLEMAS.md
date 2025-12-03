@@ -4,87 +4,29 @@ Este documento contiene soluciones a problemas comunes encontrados durante la in
 
 ---
 
-## Problema 1: Chaos Mesh - ImagePullBackOff en chaos-daemon
+## Problema 1: 404 al acceder por 127.0.0.1 (conflicto de túnel)
 
 ### Síntoma
-Durante la instalación de Chaos Mesh, el pod `chaos-daemon` muestra el estado `ImagePullBackOff` y la instalación se queda esperando indefinidamente:
-
-```
-chaos-daemon-sjpsq   0/1   ImagePullBackOff   0     6m35s
-Waiting for pod running
-```
+Al acceder a `http://127.0.0.1/usuarios` recibes `404 page not found`.
 
 ### Causa
-El pod `chaos-daemon` no puede descargar su imagen del registro de contenedores. Esto puede deberse a:
-- Problemas de conectividad con el registry
-- Limitaciones de recursos en minikube
-- Problemas con mirrors de imágenes de China
+`minikube tunnel` puede abrir un proceso que ocupa el puerto 80 mediante SSH, respondiendo 404 en lugar de enrutar al Ingress Gateway.
 
 ### Solución
-
-**Opción 1: Detener la instalación y continuar (Recomendado)**
-
-1. Detén el proceso de instalación con `Ctrl+C` en la terminal WSL
-2. Verifica el estado de los pods:
+- No usar `minikube tunnel` para este caso.
+- Acceder vía IP de minikube + NodePort del Ingress:
 
 **Terminal: WSL (Debian)**
 ```bash
-kubectl get pods -n chaos-mesh
+MINIKUBE_IP=$(minikube ip)
+kubectl get svc istio-ingressgateway -n istio-system
+# Usar el NodePort mapeado a 80, por ejemplo 31769
+
+curl http://$MINIKUBE_IP:31769/usuarios
 ```
-
-3. Si ves que la mayoría de los pods están en estado `Running`, Chaos Mesh está funcionalmente instalado:
-   - ✅ chaos-controller-manager: Necesario para experimentos de caos
-   - ✅ chaos-dashboard: Interfaz web para gestionar experimentos
-   - ✅ chaos-dns-server: Para experimentos de DNS
-   - ⚠️ chaos-daemon: Solo necesario para ciertos experimentos avanzados
-
-**Puedes continuar con el proyecto** - Las funcionalidades básicas de Chaos Engineering funcionarán correctamente.
-
-**Opción 2: Intentar reinstalar Chaos Mesh**
-
-**Terminal: WSL (Debian)**
-```bash
-# Desinstalar Chaos Mesh completamente
-kubectl delete namespace chaos-mesh
-
-# Esperar unos segundos y reinstalar
-curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
-```
-
-**Opción 3: Aumentar recursos de minikube**
-
-Si el problema persiste, puede ser por falta de recursos:
-
-**Terminal: WSL (Debian)**
-```bash
-# Detener minikube
-minikube stop
-
-# Reiniciar con más recursos
-minikube start --driver=docker --memory=6144 --cpus=4
-
-# Reinstalar Chaos Mesh
-curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
-```
-
-### Impacto
-- **Bajo:** Puedes realizar experimentos básicos de Chaos Engineering sin el daemon
-- El manifiesto `k8s/chaos-notificaciones.yaml` debería funcionar correctamente
-- Algunas funcionalidades avanzadas pueden no estar disponibles
 
 ### Verificación
-Para confirmar que Chaos Mesh está funcionando:
-
-**Terminal: WSL (Debian)**
-```bash
-# Ver todos los pods
-kubectl get pods -n chaos-mesh
-
-# Verificar que los CRDs de Chaos Mesh estén instalados
-kubectl get crd | grep chaos-mesh
-```
-
-**Resultado esperado:** Deberías ver múltiples Custom Resource Definitions (CRDs) de Chaos Mesh.
+Deberías ver respuesta JSON del servicio en lugar de 404.
 
 ---
 

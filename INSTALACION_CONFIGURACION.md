@@ -8,7 +8,7 @@ Este documento describe los pasos necesarios para instalar y configurar todas la
 3. [Instalación de kubectl](#3-instalación-de-kubectl)
 4. [Instalación de minikube](#4-instalación-de-minikube)
 5. [Instalación de Istio](#5-instalación-de-istio)
-6. [Instalación de Chaos Mesh](#6-instalación-de-chaos-mesh-opcional)
+6. [Inyección de fallos con Istio](#6-inyección-de-fallos-con-istio)
 
 ---
 
@@ -184,34 +184,33 @@ kubectl get pods -n istio-system
 
 ---
 
-## 6. Instalación de Chaos Mesh (opcional)
+## 6. Inyección de fallos con Istio
 
-**⚠️ Importante:** Chaos Mesh consume recursos adicionales. Si tu sistema tiene memoria limitada (4GB o menos), se recomienda:
-1. Primero desplegar y probar los microservicios básicos
-2. Verificar que las métricas de Istio funcionan correctamente
-3. Después, si todo funciona bien, instalar Chaos Mesh
+Para pruebas de resiliencia usaremos las capacidades nativas de Istio (Fault Injection), que son más ligeras y no requieren instalar componentes adicionales.
 
-**Nota:** Solo instala Chaos Mesh si deseas realizar pruebas avanzadas de Chaos Engineering.
+Archivos disponibles en `k8s/`:
+- `fault-injection-delay.yaml`: Añade latencia controlada a las peticiones
+- `fault-injection-abort.yaml`: Devuelve errores HTTP 503 de forma controlada
+- `fault-injection-combined.yaml`: Combina latencia y errores
+- `circuit-breaker.yaml`: Configura circuit breaker con DestinationRule
 
-### En WSL (Debian):
+Guía completa: `GUIA_INYECCION_FALLOS.md`
 
-**Terminal: WSL (Debian)**
-```bash
-# Instalar Chaos Mesh
-curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
-```
-
-**⚠️ Nota importante:** Durante la instalación, es común que el pod `chaos-daemon` muestre el estado `ImagePullBackOff` y la instalación se quede esperando. Si esto ocurre después de 5-10 minutos, puedes detener el proceso con `Ctrl+C`. La mayoría de los componentes de Chaos Mesh estarán funcionando correctamente. Consulta el archivo `RESOLUCION_PROBLEMAS.md` para más detalles sobre este problema.
-
-### Verificar instalación:
+**Ejemplo rápido:**
 
 **Terminal: WSL (Debian)**
 ```bash
-# Verificar pods de Chaos Mesh
-kubectl get pods -n chaos-mesh
-```
+# Aplicar delay del 50% y 5s
+kubectl apply -f k8s/fault-injection-delay.yaml
 
-**Resultado esperado:** La mayoría de los pods deben estar en estado `Running`. Si `chaos-daemon` muestra `ImagePullBackOff`, consulta `RESOLUCION_PROBLEMAS.md` - esto no impedirá usar las funcionalidades básicas de Chaos Engineering.
+# Generar tráfico
+for i in {1..10}; do
+	time curl -X POST http://$(minikube ip):31769/usuarios -H "Content-Type: application/json" -d "{\"nombre\":\"Test$i\"}"
+done
+
+# Limpiar
+kubectl delete -f k8s/fault-injection-delay.yaml
+```
 
 ---
 

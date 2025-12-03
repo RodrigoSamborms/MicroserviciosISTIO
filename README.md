@@ -6,10 +6,7 @@
 - k8s/: Manifiestos de Kubernetes, Istio y Chaos Engineering
 
 ## Requisitos previos
-- Docker
-- Kubernetes (minikube recomendado en WSL)
-- Istio instalado en el clúster
-- Chaos Mesh instalado para pruebas de resiliencia
+- Inyección de fallos con Istio (Fault Injection) para pruebas de resiliencia
 
 ### ⚠️ Antes de continuar
 
@@ -121,16 +118,41 @@ cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.
 ./bin/istioctl dashboard grafana
 ```
 
-### 9. Probar resiliencia
+### 9. Probar resiliencia con Istio Fault Injection
+
 **Terminal: WSL (Debian)**
+
+Istio incluye capacidades nativas de inyección de fallos sin necesidad de herramientas adicionales. Ver la [Guía Completa de Inyección de Fallos](GUIA_INYECCION_FALLOS.md) para todos los experimentos.
+
+**Ejemplo rápido - Inyectar delays:**
 ```bash
-kubectl apply -f k8s/chaos-notificaciones.yaml
+# Aplicar delays del 50% en las peticiones
+kubectl apply -f k8s/fault-injection-delay.yaml
+
+# Generar tráfico y observar latencias
+for i in {1..10}; do
+	echo "Petición $i:"
+	time curl -X POST http://192.168.49.2:31769/usuarios -H "Content-Type: application/json" -d "{\"nombre\":\"Test$i\"}"
+	echo ""
+done
+
+# Ver efectos en Kiali: http://localhost:20001/kiali/console/graph
+
+# Limpiar
+kubectl delete -f k8s/fault-injection-delay.yaml
 ```
-Esto simulará fallos en el microservicio de notificaciones cada 2 minutos.
+
+**Otros experimentos disponibles:**
+- `fault-injection-abort.yaml`: Inyectar errores HTTP 503 (30% de fallos)
+- `fault-injection-combined.yaml`: Combinar delays y errores
+- `circuit-breaker.yaml`: Configurar circuit breaker para aislar fallos
+
+Consulta [GUIA_INYECCION_FALLOS.md](GUIA_INYECCION_FALLOS.md) para instrucciones detalladas de cada experimento.
 
 ## Notas
 - Puedes modificar la probabilidad de fallo en `microservicio-notificaciones/app.py`.
 - Los readiness/liveness probes permiten que Kubernetes recupere pods caídos.
+- La inyección de fallos de Istio es más ligera que Chaos Mesh y no requiere componentes adicionales.
 - El manifiesto de Chaos Mesh requiere que esté instalado en el clúster.
 
 ---
