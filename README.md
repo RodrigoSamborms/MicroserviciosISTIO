@@ -34,34 +34,88 @@ sudo docker build -t microservicio-notificaciones:latest .
 
 ### 2. Subir imágenes a un registry accesible por Kubernetes (opcional si usas minikube con `docker-env`)
 
-### 3. Desplegar en Kubernetes
 **Terminal: WSL (Debian)**
 ```bash
+# Cargar imágenes en minikube
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+minikube image load microservicio-usuarios:latest
+minikube image load microservicio-notificaciones:latest
+```
+
+### 3. Verificar que minikube esté corriendo
+
+**Terminal: WSL (Debian)**
+```bash
+minikube status
+```
+
+**Si minikube no está corriendo**, inícialo con:
+```bash
+minikube start --driver=docker --memory=2048 --cpus=2
+```
+
+### 4. Desplegar en Kubernetes
+
+**Importante:** Asegúrate de estar en el directorio raíz del proyecto.
+
+**Terminal: WSL (Debian)**
+```bash
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
 kubectl apply -f k8s/usuarios.yaml
 kubectl apply -f k8s/notificaciones.yaml
 kubectl apply -f k8s/istio.yaml
 ```
 
-### 4. Habilitar Istio Ingress y obtener IP
+### 5. Verificar que los pods estén listos
+
 **Terminal: WSL (Debian)**
+```bash
+kubectl get pods
+```
+
+Espera hasta que todos los pods estén en estado `2/2 Running`. Esto puede tomar 2-3 minutos.
+
+### 6. Habilitar Istio Ingress Gateway con túnel
+
+**Terminal: WSL (Debian) - Mantén esta terminal abierta**
+```bash
+minikube tunnel
+```
+
+**Nota:** Este comando debe permanecer ejecutándose. Abre otra terminal WSL para los siguientes pasos.
+
+En otra terminal, verifica la IP del Ingress:
 ```bash
 kubectl get svc istio-ingressgateway -n istio-system
 ```
 
-### 5. Probar la API
-**Terminal: WSL (Debian)**
+La `EXTERNAL-IP` debe ser `127.0.0.1`.
+
+### 7. Probar la API
+**Terminal: WSL (Debian) - En otra terminal (no la del túnel)**
 ```bash
 # Crear usuario
-curl -X POST http://<INGRESS_IP>/usuarios -H "Content-Type: application/json" -d '{"nombre": "Juan"}'
+curl -X POST http://127.0.0.1/usuarios -H "Content-Type: application/json" -d '{"nombre":"Juan"}'
 
 # Listar usuarios
-curl http://<INGRESS_IP>/usuarios
+curl http://127.0.0.1/usuarios
 ```
 
-### 6. Observar métricas y trazas
-- Accede a Kiali, Jaeger o Grafana según la instalación de Istio.
+**Resultado esperado:** Deberías ver la respuesta JSON con el usuario creado y la lista de usuarios.
 
-### 7. Probar resiliencia
+### 8. Observar métricas y trazas
+
+**Terminal: WSL (Debian)**
+```bash
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.28.0
+
+# Abrir dashboards (cada comando abre un navegador)
+./bin/istioctl dashboard kiali
+./bin/istioctl dashboard jaeger
+./bin/istioctl dashboard grafana
+```
+
+### 9. Probar resiliencia
 **Terminal: WSL (Debian)**
 ```bash
 kubectl apply -f k8s/chaos-notificaciones.yaml
