@@ -63,12 +63,53 @@ cmd_start() {
     MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE")
     NODEPORT=$(kubectl get svc istio-ingressgateway -n istio-system -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null || echo "N/A")
     
+    # Iniciar dashboards en segundo plano con puertos fijos y bind 0.0.0.0
+    print_info "Iniciando dashboards en segundo plano..."
+    cd "$ISTIO_DIR" || exit 1
+
+    start_dash() {
+        local NAME=$1
+        local PORT=$2
+        local URL=$3
+        local LOGFILE="/tmp/microservicios_${NAME}.log"
+        nohup ./bin/istioctl dashboard --port "$PORT" --address 0.0.0.0 --browser=false "$NAME" > "$LOGFILE" 2>&1 &
+        echo $!
+    }
+
+    KIALI_PID=$(start_dash kiali 20001 "http://localhost:20001/kiali/console")
+    sleep 2
+    JAEGER_PID=$(start_dash jaeger 16686 "http://localhost:16686")
+    sleep 2
+    GRAFANA_PID=$(start_dash grafana 3000 "http://localhost:3000")
+    sleep 2
+
+    # Abrir navegadores
+    print_info "Abriendo dashboards en el navegador..."
+    if command -v wslview &> /dev/null; then
+        wslview "http://localhost:20001/kiali/console" &
+        wslview "http://localhost:16686" &
+        wslview "http://localhost:3000" &
+    elif command -v explorer.exe &> /dev/null; then
+        explorer.exe "http://localhost:20001/kiali/console" &
+        explorer.exe "http://localhost:16686" &
+        explorer.exe "http://localhost:3000" &
+    else
+        print_warning "No se pudo detectar navegador. Abre manualmente:"
+        echo "  • Kiali:   http://localhost:20001/kiali/console"
+        echo "  • Jaeger:  http://localhost:16686"
+        echo "  • Grafana: http://localhost:3000"
+    fi
+
     print_success "Sesión iniciada correctamente"
+    echo ""
+    print_success "Dashboards iniciados (PIDs: Kiali=$KIALI_PID, Jaeger=$JAEGER_PID, Grafana=$GRAFANA_PID)"
     echo ""
     print_info "Acceso a la API: ${GREEN}http://$MINIKUBE_IP:$NODEPORT${NC}"
     echo ""
-    print_info "Para abrir dashboards en segundo plano:"
-    echo "  ./scripts/microservicios dashboards"
+    print_info "URLs de dashboards:"
+    echo "  • Kiali:   http://localhost:20001/kiali/console"
+    echo "  • Jaeger:  http://localhost:16686"
+    echo "  • Grafana: http://localhost:3000"
     echo ""
     print_info "Para ver el estado completo:"
     echo "  ./scripts/microservicios status"
@@ -253,38 +294,65 @@ cmd_dashboards() {
     
     cd "$ISTIO_DIR" || exit 1
     
+    # Función auxiliar para abrir navegador
+    open_browser() {
+        local URL=$1
+        if command -v wslview &> /dev/null; then
+            wslview "$URL" &
+        elif command -v explorer.exe &> /dev/null; then
+            explorer.exe "$URL" &
+        fi
+    }
+    
     case "$DASHBOARD" in
         kiali|k)
             print_info "Abriendo Kiali en segundo plano..."
-            nohup ./bin/istioctl dashboard kiali > /dev/null 2>&1 &
-            print_success "Kiali iniciado (PID: $!)"
-            print_info "Accede en: http://localhost:20001/kiali"
+            nohup ./bin/istioctl dashboard --port 20001 --address 0.0.0.0 --browser=false kiali > /tmp/microservicios_kiali.log 2>&1 &
+            KIALI_PID=$!
+            sleep 2
+            print_success "Kiali iniciado (PID: $KIALI_PID)"
+            print_info "Accede en: http://localhost:20001/kiali/console"
+            open_browser "http://localhost:20001/kiali/console"
             ;;
         jaeger|j)
             print_info "Abriendo Jaeger en segundo plano..."
-            nohup ./bin/istioctl dashboard jaeger > /dev/null 2>&1 &
-            print_success "Jaeger iniciado (PID: $!)"
+            nohup ./bin/istioctl dashboard --port 16686 --address 0.0.0.0 --browser=false jaeger > /tmp/microservicios_jaeger.log 2>&1 &
+            JAEGER_PID=$!
+            sleep 2
+            print_success "Jaeger iniciado (PID: $JAEGER_PID)"
             print_info "Accede en: http://localhost:16686"
+            open_browser "http://localhost:16686"
             ;;
         grafana|g)
             print_info "Abriendo Grafana en segundo plano..."
-            nohup ./bin/istioctl dashboard grafana > /dev/null 2>&1 &
-            print_success "Grafana iniciado (PID: $!)"
+            nohup ./bin/istioctl dashboard --port 3000 --address 0.0.0.0 --browser=false grafana > /tmp/microservicios_grafana.log 2>&1 &
+            GRAFANA_PID=$!
+            sleep 2
+            print_success "Grafana iniciado (PID: $GRAFANA_PID)"
             print_info "Accede en: http://localhost:3000"
+            open_browser "http://localhost:3000"
             ;;
         all|*)
             print_info "Abriendo todos los dashboards en segundo plano..."
-            nohup ./bin/istioctl dashboard kiali > /dev/null 2>&1 &
+            nohup ./bin/istioctl dashboard --port 20001 --address 0.0.0.0 --browser=false kiali > /tmp/microservicios_kiali.log 2>&1 &
             KIALI_PID=$!
-            nohup ./bin/istioctl dashboard jaeger > /dev/null 2>&1 &
+            sleep 2
+            nohup ./bin/istioctl dashboard --port 16686 --address 0.0.0.0 --browser=false jaeger > /tmp/microservicios_jaeger.log 2>&1 &
             JAEGER_PID=$!
-            nohup ./bin/istioctl dashboard grafana > /dev/null 2>&1 &
+            sleep 2
+            nohup ./bin/istioctl dashboard --port 3000 --address 0.0.0.0 --browser=false grafana > /tmp/microservicios_grafana.log 2>&1 &
             GRAFANA_PID=$!
+            sleep 2
             
             print_success "Dashboards iniciados:"
-            echo "  • Kiali:   http://localhost:20001/kiali (PID: $KIALI_PID)"
+            echo "  • Kiali:   http://localhost:20001/kiali/console (PID: $KIALI_PID)"
             echo "  • Jaeger:  http://localhost:16686 (PID: $JAEGER_PID)"
             echo "  • Grafana: http://localhost:3000 (PID: $GRAFANA_PID)"
+            
+            print_info "Abriendo navegadores..."
+            open_browser "http://localhost:20001/kiali/console"
+            open_browser "http://localhost:16686"
+            open_browser "http://localhost:3000"
             ;;
     esac
     
