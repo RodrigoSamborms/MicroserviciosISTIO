@@ -18,55 +18,74 @@ Esta guía documenta todos los scripts disponibles en la carpeta `scripts/` para
 
 **Descripción:** Script principal unificado para gestionar el ciclo de vida completo del entorno de microservicios. Maneja minikube, dashboards de Istio (Kiali, Jaeger, Grafana) y proporciona comandos de diagnóstico.
 
-**Terminal recomendada:** WSL (Debian). Ejecuta los comandos desde `/mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO`.
+### Cómo ejecutar
 
-### Uso
+**Desde PowerShell (Windows):**
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios <comando>"
+```
 
+**Desde WSL (Debian Terminal):**
 ```bash
-./scripts/microservicios <comando> [opciones]
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+./scripts/microservicios <comando>
 ```
 
 ### Comandos Principales
 
 #### `start` - Iniciar sesión
 
-Inicia el entorno completo en segundo plano:
-- Arranca minikube con recursos configurados (2048MB RAM, 2 CPUs)
-- Verifica pods de Istio
-- Asegura inyección de sidecar en namespace `default`
-- Obtiene IP y NodePort del Ingress Gateway
-- Inicia dashboards de observabilidad (Kiali, Jaeger, Grafana) en segundo plano con puertos fijos (20001, 16686, 3000) y reintentos de port-forward
-- Realiza prueba de conectividad al API
+Inicia el entorno completo:
+- Arranca minikube (2048MB RAM, 2 CPUs)
+- Verifica y configura Istio
+- **Espera a que los pods de observabilidad estén listos** (30-60 seg en primera ejecución)
+- Inicia dashboards con port-forward en puertos fijos: `20001` (Kiali), `16686` (Jaeger), `3000` (Grafana)
+- **Abre automáticamente los dashboards en el navegador desde PowerShell**
 
-**Ejemplo:**
+**Desde PowerShell:**
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios start"
+```
+
+**Desde WSL:**
 ```bash
 ./scripts/microservicios start
 ```
 
-**Comportamiento:**
-- Si ya hay una sesión activa, muestra mensaje y no reinicia
-- Reintenta el port-forward de dashboards y escribe logs en `/tmp/microservicios_{kiali,jaeger,grafana}.log`
-- Todos los procesos corren en background
+**Dashboards abiertos en el navegador:**
+- Kiali:   http://wsl.localhost:20001/kiali/console
+- Jaeger:  http://wsl.localhost:16686
+- Grafana: http://wsl.localhost:3000
+
+**Notas importantes:**
+- Las URLs usan `wsl.localhost` (no `localhost`) desde Windows
+- Los dashboards se abren automáticamente desde PowerShell
+- Logs de port-forward: `/tmp/microservicios_{kiali,jaeger,grafana}.log`
 
 ---
 
 #### `stop` - Detener sesión
 
 Detiene todos los componentes de forma ordenada:
+- **Cierra automáticamente las ventanas del navegador** (Edge, Chrome, Firefox con dashboards)
 - Elimina configuraciones de fault injection activas
-- Cierra dashboards de Istio (Kiali, Jaeger, Grafana)
+- Cierra procesos de dashboards de Istio
 - Detiene minikube
-- Limpia archivos PID temporales
 
-**Ejemplo:**
+**Desde PowerShell:**
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios stop"
+```
+
+**Desde WSL:**
 ```bash
 ./scripts/microservicios stop
 ```
 
 **Comportamiento:**
-- Si no hay sesión activa, informa al usuario
-- Elimina VirtualServices y DestinationRules de fault injection
-- Mata procesos de dashboards por PID
+- Cierra automáticamente ventanas de navegador que contengan los dashboards
+- Limpia configuraciones de fault injection
+- Mata procesos de dashboards y minikube
 
 ---
 

@@ -4,38 +4,84 @@ Este documento contiene soluciones a problemas comunes encontrados durante la in
 
 ---
 
-## Problema 5: Dashboards (Kiali/Grafana) no abren o muestran "connection refused"
+## Problema 1: Dashboards no se abren automáticamente
 
 ### Síntoma
-Al ejecutar `./scripts/microservicios dashboards` o `start`, Kiali/Grafana no cargan y los logs muestran `error forwarding ... Connection refused`.
+Al ejecutar `./scripts/microservicios start`, el script dice que abrirá los dashboards pero no se abre ninguna ventana del navegador.
 
 ### Causa
-El port-forward puede fallar temporalmente aunque los pods estén `Running` (socat no logra conectar al puerto del pod en el primer intento).
+PowerShell puede necesitar permiso para abrir procesos externos, o el navegador predeterminado no está configurado correctamente.
 
-### Solución rápida (usa WSL - Debian)
-```bash
-# 1) Cerrar forwards anteriores
-pkill -f "istioctl dashboard" || true
+### Solución
 
-# 2) Relanzar dashboards con reintentos y puertos fijos
-cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
-./scripts/microservicios dashboards
-
-# 3) Revisar logs de port-forward si siguen sin abrir
-tail -n 40 /tmp/microservicios_kiali.log
-tail -n 40 /tmp/microservicios_grafana.log
-
-# 4) Confirmar pods en istio-system
-kubectl -n istio-system get pods
+**Opción 1: Verificar que PowerShell pueda ejecutar comandos**
+Desde PowerShell (PowerShell Extension en VS Code):
+```powershell
+# Verifica que puedas abrir URLs
+Start-Process 'http://www.google.com'
 ```
 
-### Notas
-- Los dashboards usan puertos fijos: Kiali `20001`, Jaeger `16686`, Grafana `3000`.
-- El script reintenta el port-forward antes de abrir el navegador.
+Si esto no funciona, tu política de ejecución puede estar restringida. Ejecuta:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Opción 2: Abrir manualmente los dashboards**
+Si las ventanas no se abren automáticamente, el script sigue ejecutándose correctamente. Abre manualmente:
+- Kiali:   http://wsl.localhost:20001/kiali/console
+- Jaeger:  http://wsl.localhost:16686
+- Grafana: http://wsl.localhost:3000
+
+**Verificar que los dashboards están corriendo:**
+```powershell
+wsl -d Debian bash -lc "ps -ef | grep 'istioctl dashboard' | grep -v grep"
+```
 
 ---
 
-## Problema 1: 404 al acceder por 127.0.0.1 (conflicto de túnel)
+## Problema 2: Dashboards (Kiali/Grafana) muestran "localhost rechazó la conexión"
+
+### Síntoma
+Intentas abrir las URLs pero recibes error de conexión rechazada.
+
+### Causa posible 1: Puerto incorrecto
+Los dashboards usan `wsl.localhost` (no `localhost`) desde Windows.
+
+### Causa posible 2: Pods no están listos
+Los pods de observabilidad tardan 30-60 segundos en estar listos la primera vez.
+
+### Solución
+
+**Paso 1: Verificar que los pods estén `Running`**
+```powershell
+wsl -d Debian bash -lc "kubectl -n istio-system get pods | grep -E 'kiali|grafana|jaeger'"
+```
+
+Todos deben mostrar estado `Running 1/1`.
+
+**Paso 2: Verificar que los procesos estén activos**
+```powershell
+wsl -d Debian bash -lc "ps -ef | grep 'istioctl dashboard' | grep -v grep"
+```
+
+Deberías ver 3 procesos: kiali, jaeger, grafana.
+
+**Paso 3: Revisar logs de port-forward**
+```powershell
+wsl -d Debian bash -lc "tail -n 50 /tmp/microservicios_kiali.log"
+wsl -d Debian bash -lc "tail -n 50 /tmp/microservicios_grafana.log"
+```
+
+**Paso 4: Relanzar si es necesario**
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios stop && sleep 2 && ./scripts/microservicios start"
+```
+
+---
+
+---
+
+## Problema 3: Dashboards de Kiali y Jaeger no están disponibles
 
 ### Síntoma
 Al acceder a `http://127.0.0.1/usuarios` recibes `404 page not found`.
@@ -61,7 +107,7 @@ Deberías ver respuesta JSON del servicio en lugar de 404.
 
 ---
 
-## Problema 2: Dashboards de Kiali y Jaeger no están disponibles
+## Problema 4: 404 al acceder por 127.0.0.1 (conflicto de túnel)
 
 ### Síntoma
 Al intentar abrir los dashboards con `istioctl dashboard kiali` o `istioctl dashboard jaeger`, obtienes el error:
@@ -115,7 +161,7 @@ Sin estos addons, no podrás visualizar las métricas y trazas distribuidas, que
 
 ---
 
-## Problema 3: Minikube se queda sin recursos (API server stopped)
+## Problema 5: Minikube se queda sin recursos (API server stopped)
 
 ### Síntoma
 Al verificar el estado de minikube:
@@ -191,7 +237,7 @@ curl -sSL https://mirrors.chaos-mesh.org/v2.6.0/install.sh | bash
 
 ---
 
-## Problema 4: Error 404 al acceder a los endpoints de la API
+## Problema 6: Error 404 al acceder a los endpoints de la API
 
 ### Síntoma
 Al intentar acceder a la API usando `curl http://127.0.0.1/usuarios`, obtienes:
@@ -298,7 +344,7 @@ Sin acceso correcto a la API, no podrás probar la funcionalidad de los microser
 
 ---
 
-## Problema 5: [Espacio para futuros problemas]
+## Problema 7: [Espacio para futuros problemas]
 
 *Se agregarán más problemas y soluciones según se encuentren durante la implementación del proyecto.*
 

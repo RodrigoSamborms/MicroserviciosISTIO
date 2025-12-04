@@ -108,21 +108,49 @@ curl http://192.168.49.2:31769/usuarios
 
 ### 8. Observar métricas y trazas
 
-**Terminal: WSL (Debian)**
-```bash
-# Desde la raíz del repo
-cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+**Terminal: PowerShell (recomendado - abre dashboards automáticamente)**
 
-# Abre y deja en background los dashboards con puertos fijos
-# Kiali:   http://localhost:20001/kiali/console
-# Jaeger:  http://localhost:16686
-# Grafana: http://localhost:3000
-./scripts/microservicios dashboards
-
-# Logs de port-forward (útiles si no abre):
-tail -n 40 /tmp/microservicios_kiali.log
-tail -n 40 /tmp/microservicios_grafana.log
+Desde la raíz del proyecto, ejecuta:
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios start"
 ```
+
+Este comando:
+- Espera a que los pods de observabilidad estén listos (30-60 segundos)
+- Inicia port-forwards para los 3 dashboards
+- **Abre automáticamente** 3 ventanas del navegador con:
+  - Kiali:   http://wsl.localhost:20001/kiali/console
+  - Jaeger:  http://wsl.localhost:16686
+  - Grafana: http://wsl.localhost:3000
+
+**Alternativa: Terminal WSL (si prefieres abrir manualmente)**
+
+Ejecuta desde WSL:
+```bash
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+./scripts/microservicios start
+```
+
+Luego abre manualmente en tu navegador:
+- Kiali:   http://wsl.localhost:20001/kiali/console
+- Jaeger:  http://wsl.localhost:16686
+- Grafana: http://wsl.localhost:3000
+
+**Troubleshooting de dashboards:**
+- Si los dashboards no se abren automáticamente, consulta [RESOLUCION_PROBLEMAS.md](RESOLUCION_PROBLEMAS.md) - Problema 1
+- Si ves "connection refused", consulta [RESOLUCION_PROBLEMAS.md](RESOLUCION_PROBLEMAS.md) - Problema 2
+- Para verificar logs de port-forward (WSL):
+  ```bash
+  tail -n 40 /tmp/microservicios_kiali.log
+  tail -n 40 /tmp/microservicios_grafana.log
+  ```
+
+**Cerrar dashboards (desde PowerShell):**
+```powershell
+wsl -d Debian bash -lc "cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO && ./scripts/microservicios stop"
+```
+
+Este comando cierra automáticamente las ventanas del navegador y detiene los port-forwards.
 
 ### 9. Probar resiliencia con Istio Fault Injection
 
