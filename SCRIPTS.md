@@ -18,6 +18,8 @@ Esta guía documenta todos los scripts disponibles en la carpeta `scripts/` para
 
 **Descripción:** Script principal unificado para gestionar el ciclo de vida completo del entorno de microservicios. Maneja minikube, dashboards de Istio (Kiali, Jaeger, Grafana) y proporciona comandos de diagnóstico.
 
+**Terminal recomendada:** WSL (Debian). Ejecuta los comandos desde `/mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO`.
+
 ### Uso
 
 ```bash
@@ -33,7 +35,7 @@ Inicia el entorno completo en segundo plano:
 - Verifica pods de Istio
 - Asegura inyección de sidecar en namespace `default`
 - Obtiene IP y NodePort del Ingress Gateway
-- Inicia dashboards de observabilidad (Kiali, Jaeger, Grafana) en segundo plano
+- Inicia dashboards de observabilidad (Kiali, Jaeger, Grafana) en segundo plano con puertos fijos (20001, 16686, 3000) y reintentos de port-forward
 - Realiza prueba de conectividad al API
 
 **Ejemplo:**
@@ -43,7 +45,7 @@ Inicia el entorno completo en segundo plano:
 
 **Comportamiento:**
 - Si ya hay una sesión activa, muestra mensaje y no reinicia
-- Guarda PIDs de dashboards en `/tmp/microservicios_*.pid`
+- Reintenta el port-forward de dashboards y escribe logs en `/tmp/microservicios_{kiali,jaeger,grafana}.log`
 - Todos los procesos corren en background
 
 ---
@@ -148,6 +150,12 @@ Ejecuta diagnóstico de configuración de Istio:
 - Detectar problemas de enrutamiento
 - Validar fault injection aplicado
 
+**Comandos rápidos de inspección (Terminal: WSL - Debian):**
+```bash
+kubectl get virtualservice -n default
+kubectl get destinationrule -n default
+```
+
 ---
 
 #### `status --faults` - Ver inyecciones de fallos activas
@@ -198,6 +206,26 @@ El script utiliza archivos temporales para rastrear procesos en background:
 - `/tmp/microservicios_grafana.pid` - PID del dashboard de Grafana
 
 Estos archivos se eliminan automáticamente con `./scripts/microservicios stop`.
+
+### Dashboards de Istio
+
+**Terminal: WSL (Debian)**
+```bash
+# Desde la raíz del repo
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+
+# Abre Kiali, Jaeger y Grafana en segundo plano con puertos fijos
+./scripts/microservicios dashboards
+
+# URLs
+# Kiali:   http://localhost:20001/kiali/console
+# Jaeger:  http://localhost:16686
+# Grafana: http://localhost:3000
+
+# Logs de port-forward (útiles si no abre)
+tail -n 40 /tmp/microservicios_kiali.log
+tail -n 40 /tmp/microservicios_grafana.log
+```
 
 ---
 

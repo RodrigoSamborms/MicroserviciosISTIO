@@ -4,6 +4,37 @@ Este documento contiene soluciones a problemas comunes encontrados durante la in
 
 ---
 
+## Problema 5: Dashboards (Kiali/Grafana) no abren o muestran "connection refused"
+
+### Síntoma
+Al ejecutar `./scripts/microservicios dashboards` o `start`, Kiali/Grafana no cargan y los logs muestran `error forwarding ... Connection refused`.
+
+### Causa
+El port-forward puede fallar temporalmente aunque los pods estén `Running` (socat no logra conectar al puerto del pod en el primer intento).
+
+### Solución rápida (usa WSL - Debian)
+```bash
+# 1) Cerrar forwards anteriores
+pkill -f "istioctl dashboard" || true
+
+# 2) Relanzar dashboards con reintentos y puertos fijos
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
+./scripts/microservicios dashboards
+
+# 3) Revisar logs de port-forward si siguen sin abrir
+tail -n 40 /tmp/microservicios_kiali.log
+tail -n 40 /tmp/microservicios_grafana.log
+
+# 4) Confirmar pods en istio-system
+kubectl -n istio-system get pods
+```
+
+### Notas
+- Los dashboards usan puertos fijos: Kiali `20001`, Jaeger `16686`, Grafana `3000`.
+- El script reintenta el port-forward antes de abrir el navegador.
+
+---
+
 ## Problema 1: 404 al acceder por 127.0.0.1 (conflicto de túnel)
 
 ### Síntoma

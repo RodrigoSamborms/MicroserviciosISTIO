@@ -110,12 +110,18 @@ curl http://192.168.49.2:31769/usuarios
 
 **Terminal: WSL (Debian)**
 ```bash
-cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO/istio-1.28.0
+# Desde la raíz del repo
+cd /mnt/c/Users/sambo/Documents/Programacion/GitHub/MicroserviciosISTIO
 
-# Abrir dashboards (cada comando abre un navegador)
-./bin/istioctl dashboard kiali
-./bin/istioctl dashboard jaeger
-./bin/istioctl dashboard grafana
+# Abre y deja en background los dashboards con puertos fijos
+# Kiali:   http://localhost:20001/kiali/console
+# Jaeger:  http://localhost:16686
+# Grafana: http://localhost:3000
+./scripts/microservicios dashboards
+
+# Logs de port-forward (útiles si no abre):
+tail -n 40 /tmp/microservicios_kiali.log
+tail -n 40 /tmp/microservicios_grafana.log
 ```
 
 ### 9. Probar resiliencia con Istio Fault Injection
