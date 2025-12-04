@@ -147,10 +147,6 @@ cmd_start() {
 cmd_stop() {
     print_info "Deteniendo sesión de microservicios..."
     
-    # Cerrar ventanas de navegador abiertas por PowerShell
-    print_info "Cerrando ventanas de navegador..."
-    powershell.exe -Command "Get-Process msedge, chrome, firefox -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -match 'kiali|jaeger|grafana|wsl.localhost'} | Stop-Process -Force" 2>/dev/null || true
-    
     # Verificar si hay algo corriendo
     if ! is_minikube_running; then
         print_warning "No hay sesión activa de minikube"
@@ -164,25 +160,30 @@ cmd_stop() {
             pkill -f "istioctl dashboard" 2>/dev/null || true
             print_success "Dashboards cerrados"
         fi
-        return 0
+    else
+        # Limpiar configuraciones de fault injection
+        print_info "Limpiando configuraciones de inyección de fallos..."
+        kubectl delete -f "$REPO_ROOT/k8s/fault-injection-delay.yaml" --ignore-not-found 2>/dev/null || true
+        kubectl delete -f "$REPO_ROOT/k8s/fault-injection-abort.yaml" --ignore-not-found 2>/dev/null || true
+        kubectl delete -f "$REPO_ROOT/k8s/fault-injection-combined.yaml" --ignore-not-found 2>/dev/null || true
+        kubectl delete -f "$REPO_ROOT/k8s/circuit-breaker.yaml" --ignore-not-found 2>/dev/null || true
+        
+        # Cerrar dashboards
+        DASH_COUNT=$(count_dashboards)
+        if [ "$DASH_COUNT" -gt 0 ]; then
+            print_info "Cerrando $DASH_COUNT dashboards activos..."
+            pkill -f "istioctl dashboard" 2>/dev/null || true
+        fi
+        
+        # Detener minikube
+        print_info "Deteniendo minikube..."
+        minikube stop -p "$MINIKUBE_PROFILE"
     fi
-    # Limpiar configuraciones de fault injection
-    print_info "Limpiando configuraciones de inyección de fallos..."
-    kubectl delete -f "$REPO_ROOT/k8s/fault-injection-delay.yaml" --ignore-not-found 2>/dev/null || true
-    kubectl delete -f "$REPO_ROOT/k8s/fault-injection-abort.yaml" --ignore-not-found 2>/dev/null || true
-    kubectl delete -f "$REPO_ROOT/k8s/fault-injection-combined.yaml" --ignore-not-found 2>/dev/null || true
-    kubectl delete -f "$REPO_ROOT/k8s/circuit-breaker.yaml" --ignore-not-found 2>/dev/null || true
     
-    # Cerrar dashboards
-    DASH_COUNT=$(count_dashboards)
-    if [ "$DASH_COUNT" -gt 0 ]; then
-        print_info "Cerrando $DASH_COUNT dashboards activos..."
-        pkill -f "istioctl dashboard" 2>/dev/null || true
-    fi
-    
-    # Detener minikube
-    print_info "Deteniendo minikube..."
-    minikube stop -p "$MINIKUBE_PROFILE"
+    # Cerrar ventanas de navegador abiertas (ÚLTIMO PASO)
+    print_info "Cerrando ventanas del navegador..."
+    powershell.exe -Command '$urls = @("http://wsl.localhost:20001", "http://wsl.localhost:16686", "http://wsl.localhost:3000", "http://localhost:20001", "http://localhost:16686", "http://localhost:3000"); foreach ($url in $urls) { Start-Process "cmd.exe" "/c taskkill /FI \"WINDOWTITLE eq *$url*\" /F /T" -WindowStyle Hidden -ErrorAction SilentlyContinue 2>$null | Out-Null }' 2>/dev/null || true
+    sleep 1
     
     print_success "Sesión detenida correctamente"
 }
