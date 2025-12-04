@@ -21,6 +21,46 @@ print_success() { echo -e "${GREEN}✓${NC} $1"; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
+# Espera a que un deployment esté disponible (no falla si expira)
+wait_for_deploy_available() {
+    local DEPLOY=$1
+    kubectl wait --for=condition=available --timeout=120s "deployment/${DEPLOY}" -n istio-system >/dev/null 2>&1 || true
+}
+
+# Inicia un dashboard con reintentos y chequeo de puerto local
+start_dashboard_pf() {
+    local NAME=$1
+    local PORT=$2
+    local URL=$3
+    local LOGFILE="/tmp/microservicios_${NAME}.log"
+    local ATTEMPTS=3
+    local PID=""
+
+    # Evita procesos huérfanos en el mismo puerto
+    pkill -f "istioctl dashboard --port ${PORT}" 2>/dev/null || true
+
+    for ATTEMPT in $(seq 1 "$ATTEMPTS"); do
+        nohup ./bin/istioctl dashboard --port "$PORT" --address 0.0.0.0 --browser=false "$NAME" > "$LOGFILE" 2>&1 &
+        PID=$!
+        sleep 2
+
+        # Considera éxito cualquier respuesta HTTP (no solo 2xx)
+        local STATUS
+        STATUS=$(curl -s -o /dev/null --max-time 3 -w "%{http_code}" "$URL" || true)
+        if [ "$STATUS" != "000" ]; then
+            echo "$PID"
+            return 0
+        fi
+
+        # Si falló, intenta de nuevo
+        kill "$PID" 2>/dev/null || true
+        sleep 2
+    done
+
+    echo "$PID"
+    return 1
+}
+
 # Verificar si minikube está corriendo
 is_minikube_running() {
     minikube status -p "$MINIKUBE_PROFILE" 2>/dev/null | grep -q "host: Running" && return 0 || return 1
@@ -63,36 +103,38 @@ cmd_start() {
     MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE")
     NODEPORT=$(kubectl get svc istio-ingressgateway -n istio-system -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null || echo "N/A")
     
-    # Iniciar dashboards en segundo plano con puertos fijos y bind 0.0.0.0
+    # Iniciar dashboards en segundo plano con reintentos
     print_info "Iniciando dashboards en segundo plano..."
     cd "$ISTIO_DIR" || exit 1
 
-    start_dash() {
-        local NAME=$1
-        local PORT=$2
-        local URL=$3
-        local LOGFILE="/tmp/microservicios_${NAME}.log"
-        nohup ./bin/istioctl dashboard --port "$PORT" --address 0.0.0.0 --browser=false "$NAME" > "$LOGFILE" 2>&1 &
-        echo $!
-    }
+    wait_for_deploy_available kiali
+    wait_for_deploy_available grafana
+    wait_for_deploy_available jaeger
 
-    KIALI_PID=$(start_dash kiali 20001 "http://localhost:20001/kiali/console")
-    sleep 2
-    JAEGER_PID=$(start_dash jaeger 16686 "http://localhost:16686")
-    sleep 2
-    GRAFANA_PID=$(start_dash grafana 3000 "http://localhost:3000")
-    sleep 2
+    KIALI_PID=$(start_dashboard_pf kiali 20001 "http://127.0.0.1:20001/kiali")
+    KIALI_OK=$?
+    JAEGER_PID=$(start_dashboard_pf jaeger 16686 "http://127.0.0.1:16686")
+    JAEGER_OK=$?
+    GRAFANA_PID=$(start_dashboard_pf grafana 3000 "http://127.0.0.1:3000")
+    GRAFANA_OK=$?
 
-    # Abrir navegadores
+    if [ "$KIALI_OK" -ne 0 ]; then
+        print_warning "Kiali no respondió después de reintentos; revisa /tmp/microservicios_kiali.log"
+    fi
+    if [ "$GRAFANA_OK" -ne 0 ]; then
+        print_warning "Grafana no respondió después de reintentos; revisa /tmp/microservicios_grafana.log"
+    fi
+
+    # Abrir navegadores solo si el forward respondió
     print_info "Abriendo dashboards en el navegador..."
     if command -v wslview &> /dev/null; then
-        wslview "http://localhost:20001/kiali/console" &
-        wslview "http://localhost:16686" &
-        wslview "http://localhost:3000" &
+        [ "$KIALI_OK" -eq 0 ] && wslview "http://localhost:20001/kiali/console" &
+        [ "$JAEGER_OK" -eq 0 ] && wslview "http://localhost:16686" &
+        [ "$GRAFANA_OK" -eq 0 ] && wslview "http://localhost:3000" &
     elif command -v explorer.exe &> /dev/null; then
-        explorer.exe "http://localhost:20001/kiali/console" &
-        explorer.exe "http://localhost:16686" &
-        explorer.exe "http://localhost:3000" &
+        [ "$KIALI_OK" -eq 0 ] && explorer.exe "http://localhost:20001/kiali/console" &
+        [ "$JAEGER_OK" -eq 0 ] && explorer.exe "http://localhost:16686" &
+        [ "$GRAFANA_OK" -eq 0 ] && explorer.exe "http://localhost:3000" &
     else
         print_warning "No se pudo detectar navegador. Abre manualmente:"
         echo "  • Kiali:   http://localhost:20001/kiali/console"
@@ -102,7 +144,7 @@ cmd_start() {
 
     print_success "Sesión iniciada correctamente"
     echo ""
-    print_success "Dashboards iniciados (PIDs: Kiali=$KIALI_PID, Jaeger=$JAEGER_PID, Grafana=$GRAFANA_PID)"
+    print_success "Dashboards: Kiali (PID=$KIALI_PID, estado=$( [ "$KIALI_OK" -eq 0 ] && echo ok || echo error )), Jaeger (PID=$JAEGER_PID, estado=$( [ "$JAEGER_OK" -eq 0 ] && echo ok || echo error )), Grafana (PID=$GRAFANA_PID, estado=$( [ "$GRAFANA_OK" -eq 0 ] && echo ok || echo error ))"
     echo ""
     print_info "Acceso a la API: ${GREEN}http://$MINIKUBE_IP:$NODEPORT${NC}"
     echo ""
@@ -307,52 +349,75 @@ cmd_dashboards() {
     case "$DASHBOARD" in
         kiali|k)
             print_info "Abriendo Kiali en segundo plano..."
-            nohup ./bin/istioctl dashboard --port 20001 --address 0.0.0.0 --browser=false kiali > /tmp/microservicios_kiali.log 2>&1 &
-            KIALI_PID=$!
-            sleep 2
-            print_success "Kiali iniciado (PID: $KIALI_PID)"
-            print_info "Accede en: http://localhost:20001/kiali/console"
-            open_browser "http://localhost:20001/kiali/console"
+            wait_for_deploy_available kiali
+            KIALI_PID=$(start_dashboard_pf kiali 20001 "http://127.0.0.1:20001/kiali")
+            if [ $? -eq 0 ]; then
+                print_success "Kiali iniciado (PID: $KIALI_PID)"
+                print_info "Accede en: http://localhost:20001/kiali/console"
+                open_browser "http://localhost:20001/kiali/console"
+            else
+                print_warning "Kiali no respondió después de reintentos; revisa /tmp/microservicios_kiali.log"
+            fi
             ;;
         jaeger|j)
             print_info "Abriendo Jaeger en segundo plano..."
-            nohup ./bin/istioctl dashboard --port 16686 --address 0.0.0.0 --browser=false jaeger > /tmp/microservicios_jaeger.log 2>&1 &
-            JAEGER_PID=$!
-            sleep 2
-            print_success "Jaeger iniciado (PID: $JAEGER_PID)"
-            print_info "Accede en: http://localhost:16686"
-            open_browser "http://localhost:16686"
+            wait_for_deploy_available jaeger
+            JAEGER_PID=$(start_dashboard_pf jaeger 16686 "http://127.0.0.1:16686")
+            if [ $? -eq 0 ]; then
+                print_success "Jaeger iniciado (PID: $JAEGER_PID)"
+                print_info "Accede en: http://localhost:16686"
+                open_browser "http://localhost:16686"
+            else
+                print_warning "Jaeger no respondió después de reintentos; revisa /tmp/microservicios_jaeger.log"
+            fi
             ;;
         grafana|g)
             print_info "Abriendo Grafana en segundo plano..."
-            nohup ./bin/istioctl dashboard --port 3000 --address 0.0.0.0 --browser=false grafana > /tmp/microservicios_grafana.log 2>&1 &
-            GRAFANA_PID=$!
-            sleep 2
-            print_success "Grafana iniciado (PID: $GRAFANA_PID)"
-            print_info "Accede en: http://localhost:3000"
-            open_browser "http://localhost:3000"
+            wait_for_deploy_available grafana
+            GRAFANA_PID=$(start_dashboard_pf grafana 3000 "http://127.0.0.1:3000")
+            if [ $? -eq 0 ]; then
+                print_success "Grafana iniciado (PID: $GRAFANA_PID)"
+                print_info "Accede en: http://localhost:3000"
+                open_browser "http://localhost:3000"
+            else
+                print_warning "Grafana no respondió después de reintentos; revisa /tmp/microservicios_grafana.log"
+            fi
             ;;
         all|*)
             print_info "Abriendo todos los dashboards en segundo plano..."
-            nohup ./bin/istioctl dashboard --port 20001 --address 0.0.0.0 --browser=false kiali > /tmp/microservicios_kiali.log 2>&1 &
-            KIALI_PID=$!
-            sleep 2
-            nohup ./bin/istioctl dashboard --port 16686 --address 0.0.0.0 --browser=false jaeger > /tmp/microservicios_jaeger.log 2>&1 &
-            JAEGER_PID=$!
-            sleep 2
-            nohup ./bin/istioctl dashboard --port 3000 --address 0.0.0.0 --browser=false grafana > /tmp/microservicios_grafana.log 2>&1 &
-            GRAFANA_PID=$!
-            sleep 2
+            wait_for_deploy_available kiali
+            wait_for_deploy_available jaeger
+            wait_for_deploy_available grafana
+
+            KIALI_PID=$(start_dashboard_pf kiali 20001 "http://127.0.0.1:20001/kiali")
+            KIALI_OK=$?
+            JAEGER_PID=$(start_dashboard_pf jaeger 16686 "http://127.0.0.1:16686")
+            JAEGER_OK=$?
+            GRAFANA_PID=$(start_dashboard_pf grafana 3000 "http://127.0.0.1:3000")
+            GRAFANA_OK=$?
             
-            print_success "Dashboards iniciados:"
-            echo "  • Kiali:   http://localhost:20001/kiali/console (PID: $KIALI_PID)"
-            echo "  • Jaeger:  http://localhost:16686 (PID: $JAEGER_PID)"
-            echo "  • Grafana: http://localhost:3000 (PID: $GRAFANA_PID)"
-            
-            print_info "Abriendo navegadores..."
-            open_browser "http://localhost:20001/kiali/console"
-            open_browser "http://localhost:16686"
-            open_browser "http://localhost:3000"
+            print_success "Dashboards iniciados (puertos fijos):"
+            if [ "$KIALI_OK" -eq 0 ]; then
+                echo "  • Kiali:   http://localhost:20001/kiali/console (PID: $KIALI_PID)"
+                open_browser "http://localhost:20001/kiali/console"
+            else
+                echo "  • Kiali:   http://localhost:20001/kiali/console (error en port-forward)"
+                print_warning "Kiali no respondió; revisa /tmp/microservicios_kiali.log"
+            fi
+            if [ "$JAEGER_OK" -eq 0 ]; then
+                echo "  • Jaeger:  http://localhost:16686 (PID: $JAEGER_PID)"
+                open_browser "http://localhost:16686"
+            else
+                echo "  • Jaeger:  http://localhost:16686 (error en port-forward)"
+                print_warning "Jaeger no respondió; revisa /tmp/microservicios_jaeger.log"
+            fi
+            if [ "$GRAFANA_OK" -eq 0 ]; then
+                echo "  • Grafana: http://localhost:3000 (PID: $GRAFANA_PID)"
+                open_browser "http://localhost:3000"
+            else
+                echo "  • Grafana: http://localhost:3000 (error en port-forward)"
+                print_warning "Grafana no respondió; revisa /tmp/microservicios_grafana.log"
+            fi
             ;;
     esac
     
