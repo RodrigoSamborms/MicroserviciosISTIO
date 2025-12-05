@@ -158,6 +158,11 @@ Este comando cierra automáticamente las ventanas del navegador y detiene los po
 
 Istio incluye capacidades nativas de inyección de fallos sin necesidad de herramientas adicionales. Ver la [Guía Completa de Inyección de Fallos](GUIA_INYECCION_FALLOS.md) para todos los experimentos.
 
+**⚠️ Importante:** Antes de empezar, familiarízate con los dashboards leyendo:
+1. **[📚 Índice de Dashboards y Observabilidad](INDICE_DASHBOARDS_OBSERVABILIDAD.md)** - Punto de entrada para todas las guías
+2. **[LABORATORIO_PRIMER_EXPERIMENTO.md](LABORATORIO_PRIMER_EXPERIMENTO.md)** - Tu primer experimento paso a paso (~20 min)
+3. **[REFERENCIA_RAPIDA_DASHBOARDS.md](REFERENCIA_RAPIDA_DASHBOARDS.md)** - Cheat sheet para consultas rápidas durante pruebas
+
 **Ejemplo rápido - Inyectar delays:**
 ```bash
 # Aplicar delays del 50% en las peticiones
