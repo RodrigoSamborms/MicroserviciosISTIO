@@ -187,17 +187,12 @@ cmd_stop() {
         minikube stop -p "$MINIKUBE_PROFILE"
     fi
     
-    # Cerrar la ventana dedicada del navegador (ÚLTIMO PASO)
-    if [ -n "$BROWSER_PID" ]; then
-        print_info "Cerrando ventana dedicada del navegador (PID Windows=$BROWSER_PID)..."
-        powershell.exe -Command "try { Stop-Process -Id $BROWSER_PID -Force -ErrorAction SilentlyContinue } catch { }" 2>/dev/null || true
-        rm -f /tmp/microservicios_browser.pid 2>/dev/null || true
-        sleep 1
-    else
-        print_warning "No se encontró PID de la ventana del navegador; si sigue abierta, ciérrala manualmente"
-    fi
+    # Limpiar archivo de PID del navegador si existe
+    rm -f /tmp/microservicios_browser.pid 2>/dev/null || true
     
     print_success "Sesión detenida correctamente"
+    echo ""
+    print_warning "Recuerda cerrar manualmente las ventanas del navegador con los dashboards"
 }
 
 # STATUS: Mostrar estado
