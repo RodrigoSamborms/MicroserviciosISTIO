@@ -51,11 +51,23 @@ done
 ```
 
 **Espera 5 segundos.** Entonces:
-- **Kiali**: Deberías ver líneas GREEN conectando los servicios
+- **Kiali**: En la esquina superior derecha, cambia el selector de tiempo a **"Last 1 minute"** y presiona **Refresh** (icono circular). Deberías ver líneas conectando los servicios.
 - **Grafana**: Deberías ver actividad en los gráficos
 - **Jaeger**: Click "Find Traces" y deberías ver 5 trazas recientes
 
-✅ Si ves esto, estamos listos.
+**⚠️ IMPORTANTE sobre las líneas ROJAS/NARANJAS en Kiali:**
+
+Verás líneas **ROJAS o NARANJAS** entre `usuarios → notificaciones`. **Esto es NORMAL y ESPERADO**, NO es un problema.
+
+El microservicio-notificaciones está diseñado intencionalmente para simular fallos aleatorios:
+- **30% de probabilidad de error 500** (por eso ves líneas rojas)
+- **30% de probabilidad de delay 5s**
+
+Esto es parte del proyecto de resiliencia. En Kiali deberías ver:
+- Error Rate: ~20-30% en la conexión usuarios → notificaciones
+- Línea ROJA o NARANJA (depende del error rate en ese momento)
+
+**Esto es correcto.** El objetivo del laboratorio es que observes cómo agregan fallos ADICIONALES con Istio sobre estos fallos naturales.
 
 ---
 
@@ -85,35 +97,40 @@ done
 
 En **Kiali**:
 ```
-✓ Línea VERDE entre usuarios → notificaciones
+✓ Línea GREEN entre istio-ingressgateway → usuarios (sin errores en entrada)
+✓ Línea ROJA/NARANJA entre usuarios → notificaciones (errores naturales ~20-30%)
 ✓ Request Rate: ~2 req/s (aprox)
-✓ Error Rate: 0%
-✓ Response Time p95: ~100-200ms
+✓ Error Rate: ~20-30% (NORMAL - errores simulados por el código)
+✓ Response Time p95: ~100-5000ms (varía por delays aleatorios)
 ```
+
+**Nota:** Los errores y delays que ves ahora son parte del código normal del microservicio. En las siguientes fases agregaremos fallos ADICIONALES con Istio.
 
 En **Grafana**:
 ```
-✓ Response Time: línea plana ~50-100ms
-✓ Error Rate: línea plana 0%
+✓ Response Time: línea variable ~100-5000ms (por delays aleatorios)
+✓ Error Rate: línea ~20-30% (errores naturales del código)
 ✓ Request Volume: línea consistente ~2 req/s
 ```
 
 En **Jaeger**:
 ```
-✓ Trazas: todas ~100-200ms
-✓ Ninguna roja (sin errores)
+✓ ~70% trazas: ~100-200ms (normales)
+✓ ~30% trazas: ROJAS o ~5000ms (errores/delays del código)
 ```
 
-### 3. Documenta este estado
+### 3. Documenta este estado "baseline"
 
-Toma una screenshot (Win+Shift+S) de cada dashboard como referencia.
+Este es tu **baseline** (línea base). Toma una screenshot (Win+Shift+S) de cada dashboard como referencia.
+
+**Recuerda:** Los errores y delays que ves ahora (20-30% error, algunos delays 5s) son NATURALES del código. En la siguiente fase agregaremos fallos ADICIONALES con Istio y verás cómo los números AUMENTAN.
 
 ---
 
 ## Fase 2: Aplicar Fault Injection - DELAYS (5 min)
 
 ### Objetivo
-Inyectar 5 segundos de delay en el 50% de peticiones al servicio de notificaciones.
+**AGREGAR** 5 segundos de delay en el 50% de peticiones al servicio de notificaciones (esto es ADICIONAL a los delays naturales del 30% que ya existen).
 
 ### 1. Aplica la configuración
 
@@ -145,41 +162,46 @@ sleep 5
 
 **En Kiali** (espera 10-15 segundos):
 ```
-CAMBIO: Línea se vuelve NARANJA/YELLOW
+CAMBIO: Línea probablemente sigue ROJA (por errores naturales ~20-30%)
 ✓ Request Rate: sigue siendo ~2 req/s
-✗ Error Rate: sigue siendo 0% (es correcto, delays no son errores)
-✓ Response Time p95: AUMENTA a ~5000-5200ms ⬆️⬆️⬆️ (¡IMPORTANTE!)
+✓ Error Rate: sigue siendo ~20-30% (no cambia, los delays no son errores)
+✓ Response Time p95: AUMENTA aún más a ~5000-5200ms ⬆️⬆️⬆️ (¡IMPORTANTE!)
+  └─ Antes: ~100-5000ms (variable por delays naturales)
+  └─ Ahora: TODOS los que tienen delay están cerca de 5000ms
 ```
 
 Hoverea la línea usuarios → notificaciones para ver números.
 
 **En Grafana** (espera 30-60 segundos):
 ```
-CAMBIO: Response Time sube dramáticamente
-✓ Response Time: ve un PICO a ~5000ms ⬆️⬆️⬆️
-✓ Error Rate: sigue en 0%
+CAMBIO: Response Time sube y se vuelve MÁS CONSISTENTE
+✓ Response Time: Más trazas cerca de ~5000ms ⬆️⬆️⬆️
+  └─ Antes: algunas ~100ms, algunas ~5000ms (variable)
+  └─ Ahora: 50% Istio + 30% natural = MÁS delays de 5000ms
+✓ Error Rate: sigue en ~20-30% (no cambia)
 ✓ Request Volume: sigue en ~2 req/s
 ```
 
 **En Jaeger** (click "Find Traces" cada 10 segundos):
 ```
-CAMBIO: Las trazas ahora duran más
-✓ ~50% de trazas: ~100-200ms (no afectadas)
-✓ ~50% de trazas: ~5000ms (con delay) 
-  └─ Abre una de las largas, verás el span "Call notificaciones: 5000ms"
+CAMBIO: Ahora VES MÁS trazas largas (combinación de delays)
+✓ ~20% trazas: ~100-200ms (sin delays)
+✓ ~80% trazas: ~5000ms (Istio 50% + Natural 30% combinados)
+  └─ Abre una, verás el span "Call notificaciones: 5000ms"
 ```
 
 ### 4. Análisis
 
 **Preguntas:**
-- ✅ ¿Ves el delay claramente en Kiali?
-- ✅ ¿Grafana muestra un pico en Response Time?
-- ✅ ¿Jaeger muestra trazas de ~5000ms?
+- ✅ ¿Ves que ahora HAY MÁS trazas con delay de 5000ms que antes?
+- ✅ ¿Grafana muestra Response Time más alto y consistente?
+- ✅ ¿Jaeger muestra ~80% de trazas con ~5000ms (antes era ~30%)?
 
 **Lo que esto significa:**
-- El 50% de peticiones están siendo delayed 5 segundos
-- El error rate es 0% porque Istio no está rechazando, solo retrasando
-- El cliente (tu curl) espera esos 5 segundos antes de recibir respuesta
+- Antes: 30% de peticiones con delay natural
+- Ahora: 50% Istio + 30% natural = ~80% con delays (algunos se superponen)
+- El error rate sigue igual (~20-30%) porque Istio solo retrasa, no rechaza
+- Los delays de Istio son ADICIONALES a los naturales del código
 
 ---
 
@@ -205,22 +227,24 @@ kubectl get virtualservice -n default
 sleep 10
 ```
 
-### 3. Observa que vuelve a la normalidad
+### 3. Observa que vuelve al baseline (con errores naturales)
 
 **En Kiali:**
 ```
-✓ Línea vuelve a VERDE
-✓ p95 vuelve a ~100-200ms
+✓ Línea vuelve a ROJA/NARANJA (errores naturales ~20-30%)
+✓ p95 vuelve a ~100-5000ms variable (solo delays naturales del 30%)
 ```
 
 **En Grafana:**
 ```
-✓ Response Time vuelve a línea plana ~50-100ms
+✓ Response Time vuelve a variable ~100-5000ms (solo delays naturales)
+  └─ Ya no ves el 80% con delays, solo el 30% natural
 ```
 
 **En Jaeger:**
 ```
-✓ Nuevas trazas: todas ~100-200ms nuevamente
+✓ Nuevas trazas: ~70% normales ~100ms, ~30% con delay/error natural
+  └─ Ya no ves el 80% con delays de antes
 ```
 
 ---
@@ -228,7 +252,9 @@ sleep 10
 ## Fase 4: Aplicar Fault Injection - ERRORES (5 min)
 
 ### Objetivo
-Inyectar HTTP 503 en el 30% de peticiones.
+**AGREGAR** HTTP 503 en el 30% de peticiones (esto es ADICIONAL a los errores 500 naturales del 30% que ya existen).
+
+**Resultado esperado:** ~60% de error rate total (30% Istio + 30% natural, algunos se superponen = ~50-60%)
 
 ### 1. Aplica la configuración
 
@@ -244,39 +270,43 @@ sleep 5
 
 **En Kiali** (espera 10-15 segundos):
 ```
-CAMBIO: Línea se vuelve ROJA
+CAMBIO: Línea sigue ROJA pero Error Rate AUMENTA significativamente
 ✓ Request Rate: sigue siendo ~2 req/s
-✗ Error Rate: AUMENTA a ~30% ⬆️⬆️⬆️ (¡IMPORTANTE!)
-✓ Response Time p95: vuelve a ~50-100ms (rápido porque rechaza antes)
+✗ Error Rate: AUMENTA de ~20-30% a ~50-60% ⬆️⬆️⬆️ (¡IMPORTANTE!)
+  └─ Antes: ~20-30% (errores naturales)
+  └─ Ahora: ~50-60% (30% Istio + 30% natural, con superposición)
+✓ Response Time p95: ~50-100ms (más rápido porque ahora más peticiones fallan antes)
 ```
 
 **En Grafana** (espera 30-60 segundos):
 ```
-CAMBIO: Error Rate sube, Response Time baja
-✓ Response Time: vuelve a ~50-100ms (rápido porque fallan antes)
-✓ Error Rate: PICO a ~30% ⬆️⬆️⬆️
+CAMBIO: Error Rate sube DRAMÁTICAMENTE
+✓ Response Time: ~50-100ms (más consistente porque más errores rápidos)
+✓ Error Rate: PICO a ~50-60% ⬆️⬆️⬆️ (antes ~20-30%)
 ```
 
 **En Jaeger** (click "Find Traces"):
 ```
-CAMBIO: ~30% de trazas ahora están ROJAS
-✓ ~70% de trazas: normales ~100ms
-✓ ~30% de trazas: ROJAS (error HTTP 503)
-  └─ Abre una roja, verás error: "HTTP 503 Service Unavailable"
+CAMBIO: Ahora VES MÁS trazas ROJAS
+✓ ~40-50% de trazas: normales ~100ms
+✓ ~50-60% de trazas: ROJAS (combinación 503 Istio + 500 natural)
+  └─ Abre una roja con 503: error "HTTP 503 Service Unavailable" (Istio)
+  └─ Abre una roja con 500: error "Fallo simulado" (código natural)
 ```
 
 ### 3. Análisis
 
 **Preguntas:**
-- ✅ ¿Ves línea ROJA en Kiali?
-- ✅ ¿Grafana muestra Error Rate ~30%?
-- ✅ ¿Jaeger muestra ~30% trazas rojas?
+- ✅ ¿Ves línea ROJA más intensa en Kiali?
+- ✅ ¿Grafana muestra Error Rate aumentó de ~30% a ~50-60%?
+- ✅ ¿Jaeger muestra ~50-60% trazas rojas (antes era ~20-30%)?
+- ✅ ¿Puedes distinguir errores 503 (Istio) vs 500 (natural) en Jaeger?
 
 **Lo que esto significa:**
-- El 30% de peticiones están siendo rechazadas con 503
-- El 70% siguen llegando normalmente
-- Los usuarios verían ~3 de cada 10 peticiones fallando
-- La respuesta es RÁPIDA (solo ~50ms) porque Istio rechaza sin esperar al servicio
+- Antes: ~20-30% errores naturales (500)
+- Ahora: 30% Istio (503) + 30% natural (500) = ~50-60% total
+- Los usuarios verían ~5-6 de cada 10 peticiones fallando (en lugar de 2-3)
+- Los errores de Istio (503) son ADICIONALES a los naturales (500)
 
 ---
 
@@ -290,7 +320,7 @@ kubectl delete -f k8s/fault-injection-abort.yaml
 sleep 10
 ```
 
-Verifica que todo vuelve a la normalidad (línea VERDE, 0% error).
+Verifica que todo vuelve al baseline (línea ROJA con ~20-30% error natural, no 0%).
 
 ---
 
@@ -342,11 +372,14 @@ sleep 10
 
 ## Resumen: Qué Aprendiste
 
-| Escenario | Síntoma en Kiali | Síntoma en Grafana | Síntoma en Jaeger |
-|-----------|------------------|-------------------|-------------------|
-| **Delays 50%** | Línea NARANJA, p95 ↑ a 5000ms | Response Time ↑ a 5000ms | 50% trazas ~5000ms |
-| **Errores 30%** | Línea ROJA, Error Rate ↑ 30% | Error Rate ↑ 30% | 30% trazas ROJAS |
-| **Combinado** | Línea ROJA, p95 ↑ 3000ms | Ambos indicadores ↑ | Ambos síntomas |
+| Escenario | Error Rate | Response Time p95 | Trazas con Delay | Trazas con Error |
+|-----------|------------|-------------------|------------------|------------------|
+| **Baseline (natural)** | ~20-30% | Variable ~100-5000ms | ~30% | ~20-30% |
+| **+ Delays 50% Istio** | ~20-30% | ~5000ms consistente | ~80% | ~20-30% |
+| **+ Errores 30% Istio** | ~50-60% | ~50-100ms | ~30% | ~50-60% |
+| **+ Combinado Istio** | ~40-50% | ~3000ms | ~60-70% | ~40-50% |
+
+**Lección clave:** Los fallos de Istio se **SUMAN** a los fallos naturales del código. Por eso ves porcentajes más altos que los configurados en los manifiestos.
 
 ---
 
